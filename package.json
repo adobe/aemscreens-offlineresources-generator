@@ -1,0 +1,27 @@
+{
+    "name": "@adobe/screens-manifest-generator",
+    "version": "0.0.1",
+    "description": "Manifest generator for Screens channel created through Franklin",
+    "main": "src/index.js",
+    "type": "module",
+    "scripts": {
+        "lint:js": "eslint .",
+        "lint": "npm run lint:js"
+    },
+    "dependencies": {
+        "@adobe/helix-shared-git": "3.0.0",
+        "isomorphic-git": "1.21.0",
+        "fs-extra": "11.1.0",
+        "node-fetch": "^3.3.0"
+    },
+    "devDependencies": {
+        "@babel/core": "7.20.12",
+        "@babel/eslint-parser": "7.19.1",
+        "eslint": "8.33.0",
+        "eslint-config-airbnb-base": "15.0.0",
+        "eslint-plugin-import": "2.27.5",
+        "stylelint": "14.16.1",
+        "stylelint-config-prettier": "9.0.4",
+        "stylelint-config-standard": "29.0.0"
+    }
+}
