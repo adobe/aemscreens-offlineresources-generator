@@ -30,10 +30,8 @@ export default class CreateManifest {
         + '  },\n'
         + '  "timestamp": ';
     manifest = `${manifest}${currentTime},\n`;
-    // manifest += currentTime + ',\n';
     const entries = await CreateManifest.createEntries(url, channelPath, resources);
     manifest = `${manifest}${entries}}`;
-    // manifest += entries + '}';
     return manifest;
   }
 
@@ -109,47 +107,35 @@ export default class CreateManifest {
     const pagePath = url + path;
     const resp = await fetch(pagePath);
     let entry = `{\n"path": "${path}",\n`;
-    // let entry = '{\n' +
-    //  '\"path\": \"' + path +'\",\n';
     const date = resp.headers.get('last-modified');
     if (date !== null) {
-      // entry += '\"timestamp\": ' + new Date(date).getTime() + '\n';
       entry = `${entry}"timestamp": ${new Date(date).getTime()}\n`;
     }
     entry = `${entry}},\n`;
-    // entry += '},\n';
     return entry;
   }
 
   static async createEntries(url, path, resources) {
     const resourcesArr = Array.from(resources);
     let entries = '"entries": [\n';
-    // entries += await this.addPage(url, path);
     entries = `${entries}${await CreateManifest.addPage(url, path)}`;
     for (let i = 0; i < resourcesArr.length; i += 1) {
-      // entries += '{\n\"path\": ' + '\"'+resourcesArr[i]+'\",\n';
       entries = `${entries}{\n"path": "${resourcesArr[i]}",\n`;
       const resourcePath = `${url}${resourcesArr[i]}`;
       /* eslint-disable no-await-in-loop */
       const resp = await fetch(resourcePath);
       const date = resp.headers.get('last-modified');
       if (date !== null) {
-        // entries += '\"timestamp\": ' + new Date(date).getTime() + '\n';
         entries = `${entries}"timestamp": ${new Date(date).getTime()}\n`;
       } else if (CreateManifest.isMedia(resourcesArr[i])) {
-        // entries += "\"hash\": \"" + this.getHashFromMedia(resourcesArr[i]) + '\"\n';
         entries = `${entries}"hash": "${CreateManifest.getHashFromMedia(resourcesArr[i])}"\n`;
       }
-      // entries += '}';
       entries = `${entries}}`;
       if (i < resourcesArr.length - 1) {
-        // entries += ',';
         entries = `${entries},`;
       }
-      // entries += '\n';
       entries = `${entries}\n`;
     }
-    // entries += ']\n';
     entries = `${entries}]\n`;
     return entries;
   }
