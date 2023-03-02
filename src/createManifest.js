@@ -118,7 +118,8 @@ export default class CreateManifest {
   static async createEntries(url, path, resources) {
     const resourcesArr = Array.from(resources);
     let entries = '"entries": [\n';
-    entries = `${entries}${await CreateManifest.addPage(url, path)}`;
+    const pageEntry = await CreateManifest.addPage(url, path);
+    entries = `${entries}${pageEntry}`;
     for (let i = 0; i < resourcesArr.length; i += 1) {
       entries = `${entries}{\n"path": "${resourcesArr[i]}",\n`;
       const resourcePath = `${url}${resourcesArr[i]}`;
