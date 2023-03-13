@@ -36,11 +36,13 @@ export default class CreateManifest {
   }
 
   static trimString(item, index, arr) {
-    arr[index] = item.substring(1, item.length - 1);
+    const item1 = item.trim();
+    arr[index] = item1.substring(1, item1.length - 1);
   }
 
   static trimImagesPath(item, index, arr) {
-    arr[index] = item[0] === '.' ? item.substring(1, item.length) : item;
+    const item1 = item.trim();
+    arr[index] = item1[0] === '.' ? item1.substring(1, item1.length) : item1;
   }
 
   static getScripts(scripts) {
@@ -96,16 +98,17 @@ export default class CreateManifest {
   }
 
   static isMedia(path) {
-    return path.startsWith('/media_');
+    return path.trim().startsWith('/media_');
   }
 
   static getHashFromMedia(path) {
-    return path.substring(7, path.indexOf('.'));
+    const path1 = path.trim();
+    return path1.substring(7, path1.indexOf('.'));
   }
 
   static async addPage(url, path) {
     const pagePath = url + path;
-    const resp = await fetch(pagePath);
+    const resp = await fetch(pagePath, { method: 'HEAD' });
     let entry = `{\n"path": "${path}",\n`;
     const date = resp.headers.get('last-modified');
     if (date !== null) {
@@ -121,15 +124,27 @@ export default class CreateManifest {
     const pageEntry = await CreateManifest.addPage(url, path);
     entries = `${entries}${pageEntry}`;
     for (let i = 0; i < resourcesArr.length; i += 1) {
-      entries = `${entries}{\n"path": "${resourcesArr[i]}",\n`;
-      const resourcePath = `${url}${resourcesArr[i]}`;
+      const resourceSubPath = resourcesArr[i].trim();
+      const resourcePath = `${url}${resourceSubPath}`;
       /* eslint-disable no-await-in-loop */
-      const resp = await fetch(resourcePath);
+      const resp = await fetch(resourcePath, { method: 'HEAD' });
       const date = resp.headers.get('last-modified');
+      if (!resp.ok) {
+        /* eslint-disable no-console */
+        console.log(`resource not available = ${resourcePath}`);
+        if (i === (resourcesArr.length - 1)) {
+          // remove extra comma
+          entries = entries.substring(0, entries.length - 2);
+          entries = `${entries}\n`;
+        }
+        /* eslint-disable no-continue */
+        continue;
+      }
+      entries = `${entries}{\n"path": "${resourcesArr[i]}",\n`;
       if (date !== null) {
         entries = `${entries}"timestamp": ${new Date(date).getTime()}\n`;
-      } else if (CreateManifest.isMedia(resourcesArr[i])) {
-        entries = `${entries}"hash": "${CreateManifest.getHashFromMedia(resourcesArr[i])}"\n`;
+      } else if (CreateManifest.isMedia(resourceSubPath)) {
+        entries = `${entries}"hash": "${CreateManifest.getHashFromMedia(resourceSubPath)}"\n`;
       }
       entries = `${entries}}`;
       if (i < resourcesArr.length - 1) {
