@@ -17,22 +17,15 @@ export default class CreateManifest {
       ...stylesList, ...assetsList,
       ...inlineImageList, ...dependenciesList]);
     const currentTime = new Date().getTime();
-    let manifest = '{\n'
-        + '  "version": "3.0",\n'
-        + '  "contentDelivery": {\n'
-        + '    "providers": [\n'
-        + '      {\n'
-        + '        "name": "franklin",\n'
-        + '        "endpoint": "/"\n'
-        + '      }\n'
-        + '    ],\n'
-        + '    "defaultProvider": "franklin"\n'
-        + '  },\n'
-        + '  "timestamp": ';
-    manifest = `${manifest}${currentTime},\n`;
-    const entries = await CreateManifest.createEntries(url, channelPath, resources);
-    manifest = `${manifest}${entries}}`;
-    return manifest;
+    const manifestJson = {};
+    manifestJson.version = '3.0';
+    manifestJson.contentDelivery = {};
+    manifestJson.contentDelivery.providers = [{ name: 'franklin', endpoint: '/' }];
+    manifestJson.contentDelivery.defaultProvider = 'franklin';
+    manifestJson.timestamp = currentTime;
+    const [entries, lastModified] = await CreateManifest.createEntries(url, channelPath, resources);
+    manifestJson.entries = entries;
+    return [manifestJson, lastModified];
   }
 
   static trimString(item, index, arr) {
@@ -106,23 +99,27 @@ export default class CreateManifest {
     return path1.substring(7, path1.indexOf('.'));
   }
 
-  static async addPage(url, path) {
+  static async getPageJsonEntry(url, path) {
     const pagePath = url + path;
     const resp = await fetch(pagePath, { method: 'HEAD' });
-    let entry = `{\n"path": "${path}",\n`;
+    const entry = {};
+    entry.path = path;
     const date = resp.headers.get('last-modified');
     if (date !== null) {
-      entry = `${entry}"timestamp": ${new Date(date).getTime()}\n`;
+      entry.timestamp = new Date(date).getTime();
     }
-    entry = `${entry}},\n`;
-    return entry;
+    return [entry, new Date(date).getTime()];
   }
 
   static async createEntries(url, path, resources) {
     const resourcesArr = Array.from(resources);
-    let entries = '"entries": [\n';
-    const pageEntry = await CreateManifest.addPage(url, path);
-    entries = `${entries}${pageEntry}`;
+    const entriesJson = [];
+    let lastModified = 0;
+    const [pageEntryJson, pageLastModified] = await CreateManifest.getPageJsonEntry(url, path);
+    if ((pageLastModified !== null) && (pageLastModified > lastModified)) {
+      lastModified = pageLastModified;
+    }
+    entriesJson.push(pageEntryJson);
     for (let i = 0; i < resourcesArr.length; i += 1) {
       const resourceSubPath = resourcesArr[i].trim();
       const resourcePath = `${url}${resourceSubPath}`;
@@ -132,27 +129,23 @@ export default class CreateManifest {
       if (!resp.ok) {
         /* eslint-disable no-console */
         console.log(`resource not available = ${resourcePath}`);
-        if (i === (resourcesArr.length - 1)) {
-          // remove extra comma
-          entries = entries.substring(0, entries.length - 2);
-          entries = `${entries}\n`;
-        }
         /* eslint-disable no-continue */
         continue;
       }
-      entries = `${entries}{\n"path": "${resourcesArr[i]}",\n`;
+      const resourceEntry = {};
+      resourceEntry.path = resourcesArr[i];
       if (date !== null) {
-        entries = `${entries}"timestamp": ${new Date(date).getTime()}\n`;
+        const timestamp = new Date(date).getTime();
+        if (timestamp > lastModified) {
+          lastModified = timestamp;
+        }
+        resourceEntry.timestamp = timestamp;
       } else if (CreateManifest.isMedia(resourceSubPath)) {
-        entries = `${entries}"hash": "${CreateManifest.getHashFromMedia(resourceSubPath)}"\n`;
+        resourceEntry.hash = CreateManifest.getHashFromMedia(resourceSubPath);
       }
-      entries = `${entries}}`;
-      if (i < resourcesArr.length - 1) {
-        entries = `${entries},`;
-      }
-      entries = `${entries}\n`;
+      entriesJson.push(resourceEntry);
     }
-    entries = `${entries}]\n`;
-    return entries;
+
+    return [entriesJson, lastModified];
   }
 }

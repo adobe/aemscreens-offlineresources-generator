@@ -40,15 +40,29 @@ export default class GenerateManifests {
     const manifests = JSON.parse(jsonData);
     const totalManifests = parseInt(manifests.total, 10);
     const manifestData = manifests.data;
+    const channelJson = {};
+    channelJson.channels = [];
     for (let i = 0; i < totalManifests; i += 1) {
       /* eslint-disable no-await-in-loop */
-      const manifest = await CreateManifest.createManifest(url, manifestData[i]);
-      outputFile(`${manifestData[i].path.substring(1, manifestData[i].path.length)}.manifest.json`, manifest, (err) => {
+      const [manifest, lastModified] = await CreateManifest.createManifest(url, manifestData[i]);
+      const channelEntry = {};
+      channelEntry.externalId = manifestData[i].path;
+      channelEntry.manifestPath = `${manifestData[i].path}.manifest.json`;
+      channelEntry.lastModified = new Date(lastModified);
+      channelEntry.liveUrl = `${url}${manifestData[i].path}`;
+      channelJson.channels.push(channelEntry);
+      outputFile(`${manifestData[i].path.substring(1, manifestData[i].path.length)}.manifest.json`, JSON.stringify(manifest, null, 2), (err) => {
         if (err) {
           /* eslint-disable no-console */
           console.log(err);
         }
       });
     }
+    outputFile('screens/channels.json', JSON.stringify(channelJson, null, 2), (err) => {
+      if (err) {
+        /* eslint-disable no-console */
+        console.log(err);
+      }
+    });
   }
 }

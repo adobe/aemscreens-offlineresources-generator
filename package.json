@@ -1,5 +1,5 @@
 {
-    "name": "@adobe/screens-manifest-generator",
+    "name": "@aem-screens/screens-manifest-generator",
     "version": "0.0.1",
     "description": "Manifest generator for Screens channel created through Franklin",
     "main": "src/index.js",
