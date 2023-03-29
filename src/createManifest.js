@@ -1,18 +1,20 @@
 import fetch from 'node-fetch';
+import Constants from './constants.js';
 
 export default class CreateManifest {
   static async createManifest(url, data) {
     const channelPath = data.path;
-    const scripts = data.scripts.substring(1, data.scripts.length - 1);
-    const styles = data.styles.substring(1, data.styles.length - 1);
-    const assets = data.assets.substring(1, data.assets.length - 1);
-    const dependencies = data.dependencies.substring(1, data.dependencies.length - 1);
-    const inlineImages = data['inline-images'].substring(1, data['inline-images'].length - 1);
-    const scriptsList = CreateManifest.getScripts(scripts);
-    const stylesList = CreateManifest.getStyles(styles);
-    const assetsList = CreateManifest.getAssets(assets);
-    const inlineImageList = CreateManifest.getInlineImages(inlineImages);
-    const dependenciesList = CreateManifest.getDependencies(dependencies);
+    const scriptsList = JSON.parse(data.scripts);
+    const stylesList = JSON.parse(data.styles);
+    const assets = JSON.parse(data.assets);
+    assets.forEach(CreateManifest.trimImagesPath);
+    const assetsList = (assets && assets.length !== 0) ? assets : [];
+    const inlineImages = JSON.parse(data.inlineImages);
+    inlineImages.forEach(CreateManifest.trimImagesPath);
+    const inlineImageList = (inlineImages && inlineImages.length !== 0) ? inlineImages : [];
+    const dependencies = data.dependencies ? JSON.parse(data.dependencies) : '';
+    const dependenciesList = (dependencies && dependencies.length !== 0) ? dependencies : [];
+
     const resources = new Set([...scriptsList,
       ...stylesList, ...assetsList,
       ...inlineImageList, ...dependenciesList]);
@@ -28,75 +30,18 @@ export default class CreateManifest {
     return [manifestJson, lastModified];
   }
 
-  static trimString(item, index, arr) {
-    const item1 = item.trim();
-    arr[index] = item1.substring(1, item1.length - 1);
-  }
-
   static trimImagesPath(item, index, arr) {
     const item1 = item.trim();
     arr[index] = item1[0] === '.' ? item1.substring(1, item1.length) : item1;
   }
 
-  static getScripts(scripts) {
-    if (scripts === '') {
-      return [];
-    }
-    const scriptsArr = scripts.split(',');
-    scriptsArr.forEach(CreateManifest.trimString);
-
-    return scriptsArr;
-  }
-
-  static getStyles(styles) {
-    if (styles === '') {
-      return [];
-    }
-    const stylesArr = styles.split(',');
-    stylesArr.forEach(CreateManifest.trimString);
-
-    return stylesArr;
-  }
-
-  static getAssets(assets) {
-    if (assets === '') {
-      return [];
-    }
-    const assetsArr = assets.split(',');
-    assetsArr.forEach(CreateManifest.trimString);
-    assetsArr.forEach(CreateManifest.trimImagesPath);
-
-    return assetsArr;
-  }
-
-  static getInlineImages(inlineImages) {
-    if (inlineImages === '') {
-      return [];
-    }
-    const inlineImagesArr = inlineImages.split(',');
-    inlineImagesArr.forEach(CreateManifest.trimString);
-    inlineImagesArr.forEach(CreateManifest.trimImagesPath);
-
-    return inlineImagesArr;
-  }
-
-  static getDependencies(dependencies) {
-    if (dependencies === '') {
-      return [];
-    }
-    const dependenciesArr = dependencies.split(',');
-    dependenciesArr.forEach(CreateManifest.trimString);
-
-    return dependenciesArr;
-  }
-
   static isMedia(path) {
-    return path.trim().startsWith('/media_');
+    return path.trim().startsWith(Constants.MEDIA_PREFIX);
   }
 
   static getHashFromMedia(path) {
     const path1 = path.trim();
-    return path1.substring(7, path1.indexOf('.'));
+    return path1.substring(Constants.MEDIA_PREFIX.length, path1.indexOf('.'));
   }
 
   static async getPageJsonEntry(url, path) {
@@ -105,7 +50,7 @@ export default class CreateManifest {
     const entry = {};
     entry.path = path;
     const date = resp.headers.get('last-modified');
-    if (date !== null) {
+    if (date) {
       entry.timestamp = new Date(date).getTime();
     }
     return [entry, new Date(date).getTime()];
@@ -128,13 +73,13 @@ export default class CreateManifest {
       const date = resp.headers.get('last-modified');
       if (!resp.ok) {
         /* eslint-disable no-console */
-        console.log(`resource not available = ${resourcePath}`);
+        console.log(`resource ${resourcePath} not available for channel ${path}`);
         /* eslint-disable no-continue */
         continue;
       }
       const resourceEntry = {};
       resourceEntry.path = resourcesArr[i];
-      if (date !== null) {
+      if (date) {
         const timestamp = new Date(date).getTime();
         if (timestamp > lastModified) {
           lastModified = timestamp;

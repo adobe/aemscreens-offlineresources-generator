@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import GenerateManifests from './generateManifests.js';
+import GenerateScreensOfflineConfig from './generateScreensOfflineConfig.js';
 
-export default async function generateManifest() {
-  await GenerateManifests.run(process.argv.slice(2));
+export default async function generateScreensOfflineConfig() {
+  await GenerateScreensOfflineConfig.run(process.argv.slice(2));
 }
