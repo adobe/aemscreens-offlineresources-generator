@@ -65,7 +65,7 @@ export default class CreateManifest {
       lastModified = pageLastModified;
     }
     entriesJson.push(pageEntryJson);
-    for (let i = 0; i < resourcesArr.length; i += 1) {
+    for (let i = 0; i < resourcesArr.length; i++) {
       const resourceSubPath = resourcesArr[i].trim();
       const resourcePath = `${url}${resourceSubPath}`;
       /* eslint-disable no-await-in-loop */

@@ -46,7 +46,7 @@ export default class GenerateScreensOfflineConfig {
 
   static createChannelMap(channelsData) {
     const channelsMap = new Map();
-    for (let i = 0; i < channelsData.length; i += 1) {
+    for (let i = 0; i < channelsData.length; i++) {
       const channelPath = channelsData[i].path;
       const channelData = new Map();
       channelData.set('externalId', channelsData[i].externalId);
