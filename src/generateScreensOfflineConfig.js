@@ -1,7 +1,7 @@
-import fetch from 'node-fetch';
 import { outputFile } from 'fs-extra';
 import GitUtils from './git-utils.js';
 import CreateManifest from './createManifest.js';
+import Utils from './utils.js';
 
 export default class GenerateScreensOfflineConfig {
   static parseArgs(args) {
@@ -20,28 +20,10 @@ export default class GenerateScreensOfflineConfig {
     const helixChannelsList = parsedArgs.helixChannelsList ? `${parsedArgs.helixChannelsList}.json` : '/channels.json';
     const gitUrl = await GitUtils.getOriginURL(process.cwd(), { });
     const gitBranch = await GitUtils.getBranch(process.cwd());
-    const url = `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
-    const helixManifestPath = `${url}${helixManifest}`;
-    const helixChannelsListPath = `${url}${helixChannelsList}`;
-    const manifests = await GenerateScreensOfflineConfig.fetchData(helixManifestPath);
-    const channelsList = await GenerateScreensOfflineConfig.fetchData(helixChannelsListPath);
-    await GenerateScreensOfflineConfig.createManifests(url, manifests, channelsList);
-  }
-
-  static async fetchData(path) {
-    let result = '';
-    try {
-      result = fetch(path)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`request to fetch ${path} failed with status code ${response.status}`);
-          }
-          return response.text();
-        });
-      return Promise.resolve(result);
-    } catch (e) {
-      throw new Error(`request to fetch ${path} failed with status code with error ${e}`);
-    }
+    const host = `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
+    const manifests = await Utils.fetchData(host, helixManifest);
+    const channelsList = await Utils.fetchData(host, helixChannelsList);
+    await GenerateScreensOfflineConfig.createManifests(host, manifests, channelsList);
   }
 
   static createChannelMap(channelsData) {
@@ -57,7 +39,7 @@ export default class GenerateScreensOfflineConfig {
     return channelsMap;
   }
 
-  static async createManifests(url, jsonManifestData, channelsListData) {
+  static async createManifests(host, jsonManifestData, channelsListData) {
     const manifests = JSON.parse(jsonManifestData);
     const channelsList = JSON.parse(channelsListData);
     const totalManifests = parseInt(manifests.total, 10);
@@ -68,16 +50,18 @@ export default class GenerateScreensOfflineConfig {
     channelJson.channels = [];
     for (let i = 0; i < totalManifests; i += 1) {
       /* eslint-disable no-await-in-loop */
-      const [manifest, lastModified] = await CreateManifest.createManifest(url, manifestData[i]);
+      const [manifest, lastModified] = await CreateManifest.createManifest(host, manifestData[i]);
       const channelEntry = {};
       channelEntry.manifestPath = `${manifestData[i].path}.manifest.json`;
       channelEntry.lastModified = new Date(lastModified);
       if (channelsMap.get(manifestData[i].path)) {
-        channelEntry.externalId = channelsMap.get(manifestData[i].path).get('externalId');
-        channelEntry.liveUrl = channelsMap.get(manifestData[i].path).get('liveUrl');
+        channelEntry.externalId = channelsMap.get(manifestData[i].path).get('externalId')
+          ? channelsMap.get(manifestData[i].path).get('externalId') : '';
+        channelEntry.liveUrl = channelsMap.get(manifestData[i].path).get('liveUrl')
+          ? channelsMap.get(manifestData[i].path).get('liveUrl') : '';
       } else {
         channelEntry.externalId = manifestData[i].path;
-        channelEntry.liveUrl = `${url}${manifestData[i].path}`;
+        channelEntry.liveUrl = Utils.createUrl(host, manifestData[i].path);
       }
       channelJson.channels.push(channelEntry);
       outputFile(`${manifestData[i].path.substring(1, manifestData[i].path.length)}.manifest.json`, JSON.stringify(manifest, null, 2), (err) => {

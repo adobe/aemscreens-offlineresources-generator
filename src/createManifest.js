@@ -1,9 +1,9 @@
 import fetch from 'node-fetch';
 import Constants from './constants.js';
+import Utils from './utils.js';
 
 export default class CreateManifest {
-  static async createManifest(url, data) {
-    const channelPath = data.path;
+  static async createManifest(host, data) {
     const scriptsList = JSON.parse(data.scripts);
     const stylesList = JSON.parse(data.styles);
     const assets = JSON.parse(data.assets);
@@ -25,7 +25,7 @@ export default class CreateManifest {
     manifestJson.contentDelivery.providers = [{ name: 'franklin', endpoint: '/' }];
     manifestJson.contentDelivery.defaultProvider = 'franklin';
     manifestJson.timestamp = currentTime;
-    const [entries, lastModified] = await CreateManifest.createEntries(url, channelPath, resources);
+    const [entries, lastModified] = await CreateManifest.createEntries(host, data.path, resources);
     manifestJson.entries = entries;
     return [manifestJson, lastModified];
   }
@@ -44,8 +44,8 @@ export default class CreateManifest {
     return path1.substring(Constants.MEDIA_PREFIX.length, path1.indexOf('.'));
   }
 
-  static async getPageJsonEntry(url, path) {
-    const pagePath = url + path;
+  static async getPageJsonEntry(host, path) {
+    const pagePath = Utils.createUrl(host, path);
     const resp = await fetch(pagePath, { method: 'HEAD' });
     const entry = {};
     entry.path = path;
@@ -56,18 +56,18 @@ export default class CreateManifest {
     return [entry, new Date(date).getTime()];
   }
 
-  static async createEntries(url, path, resources) {
+  static async createEntries(host, path, resources) {
     const resourcesArr = Array.from(resources);
     const entriesJson = [];
     let lastModified = 0;
-    const [pageEntryJson, pageLastModified] = await CreateManifest.getPageJsonEntry(url, path);
+    const [pageEntryJson, pageLastModified] = await CreateManifest.getPageJsonEntry(host, path);
     if ((pageLastModified !== null) && (pageLastModified > lastModified)) {
       lastModified = pageLastModified;
     }
     entriesJson.push(pageEntryJson);
     for (let i = 0; i < resourcesArr.length; i++) {
       const resourceSubPath = resourcesArr[i].trim();
-      const resourcePath = `${url}${resourceSubPath}`;
+      const resourcePath = Utils.createUrl(host, resourceSubPath);
       /* eslint-disable no-await-in-loop */
       const resp = await fetch(resourcePath, { method: 'HEAD' });
       const date = resp.headers.get('last-modified');
