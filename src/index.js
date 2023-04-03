@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import GenerateScreensOfflineConfig from './generateScreensOfflineConfig.js';
+import GenerateScreensOfflineResources from './generateScreensOfflineResources.js';
 
-export default async function generateScreensOfflineConfig() {
-  await GenerateScreensOfflineConfig.run(process.argv.slice(2));
+export default async function generateScreensOfflineResources() {
+  await GenerateScreensOfflineResources.run(process.argv.slice(2));
 }

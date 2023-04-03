@@ -3,7 +3,7 @@ import GitUtils from './git-utils.js';
 import CreateManifest from './createManifest.js';
 import Utils from './utils.js';
 
-export default class GenerateScreensOfflineConfig {
+export default class GenerateScreensOfflineResources {
   static parseArgs(args) {
     const parsedArgs = {};
     args.forEach((arg) => {
@@ -15,7 +15,7 @@ export default class GenerateScreensOfflineConfig {
   }
 
   static async run(args) {
-    const parsedArgs = GenerateScreensOfflineConfig.parseArgs(args);
+    const parsedArgs = GenerateScreensOfflineResources.parseArgs(args);
     const helixManifest = parsedArgs.helixManifest ? `${parsedArgs.helixManifest}.json` : '/manifest.json';
     const helixChannelsList = parsedArgs.helixChannelsList ? `${parsedArgs.helixChannelsList}.json` : '/channels.json';
     const gitUrl = await GitUtils.getOriginURL(process.cwd(), { });
@@ -23,7 +23,7 @@ export default class GenerateScreensOfflineConfig {
     const host = `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
     const manifests = await Utils.fetchData(host, helixManifest);
     const channelsList = await Utils.fetchData(host, helixChannelsList);
-    await GenerateScreensOfflineConfig.createManifests(host, manifests, channelsList);
+    await GenerateScreensOfflineResources.createManifests(host, manifests, channelsList);
   }
 
   static createChannelMap(channelsData) {
@@ -45,7 +45,7 @@ export default class GenerateScreensOfflineConfig {
     const totalManifests = parseInt(manifests.total, 10);
     const manifestData = manifests.data;
     const channelsData = channelsList.data;
-    const channelsMap = GenerateScreensOfflineConfig.createChannelMap(channelsData);
+    const channelsMap = GenerateScreensOfflineResources.createChannelMap(channelsData);
     const channelJson = {};
     channelJson.channels = [];
     for (let i = 0; i < totalManifests; i += 1) {
