@@ -4,6 +4,7 @@
     "description": "Screens module to generate offline resources for Screens channels created through Franklin",
     "main": "src/index.js",
     "type": "module",
+    "license": "Apache-2.0",
     "scripts": {
         "lint:js": "eslint .",
         "lint": "npm run lint:js"
