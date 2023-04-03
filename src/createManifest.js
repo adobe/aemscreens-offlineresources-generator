@@ -14,22 +14,22 @@ import fetch from 'node-fetch';
 import Constants from './constants.js';
 import Utils from './utils.js';
 
-export default class CreateManifest {
+export default class ManifestGenerator {
   static async createManifest(host, data) {
-    const scriptsList = JSON.parse(data.scripts);
-    const stylesList = JSON.parse(data.styles);
-    const assets = JSON.parse(data.assets);
-    assets.forEach(CreateManifest.trimImagesPath);
-    const assetsList = (assets && assets.length !== 0) ? assets : [];
-    const inlineImages = JSON.parse(data.inlineImages);
-    inlineImages.forEach(CreateManifest.trimImagesPath);
-    const inlineImageList = (inlineImages && inlineImages.length !== 0) ? inlineImages : [];
-    const dependencies = data.dependencies ? JSON.parse(data.dependencies) : '';
-    const dependenciesList = (dependencies && dependencies.length !== 0) ? dependencies : [];
+    /* eslint-disable object-curly-newline */
+    const { path = '', scripts = '[]', styles = '[]', assets = '[]', inlineImages = '[]', dependencies = '[]' } = data;
+    const scriptsList = JSON.parse(scripts);
+    const stylesList = JSON.parse(styles);
+    const assetsList = JSON.parse(assets);
+    assetsList.forEach(ManifestGenerator.trimImagesPath);
+    const inlineImagesList = JSON.parse(inlineImages);
+    inlineImagesList.forEach(ManifestGenerator.trimImagesPath);
+    const dependenciesList = JSON.parse(dependencies);
 
     const resources = new Set([...scriptsList,
       ...stylesList, ...assetsList,
-      ...inlineImageList, ...dependenciesList]);
+      ...inlineImagesList, ...dependenciesList]);
+    const [entries, lastModified] = await ManifestGenerator.createEntries(host, path, resources);
     const currentTime = new Date().getTime();
     const manifestJson = {};
     manifestJson.version = '3.0';
@@ -37,16 +37,21 @@ export default class CreateManifest {
     manifestJson.contentDelivery.providers = [{ name: 'franklin', endpoint: '/' }];
     manifestJson.contentDelivery.defaultProvider = 'franklin';
     manifestJson.timestamp = currentTime;
-    const [entries, lastModified] = await CreateManifest.createEntries(host, data.path, resources);
     manifestJson.entries = entries;
     return [manifestJson, lastModified];
   }
 
+  /*
+  If the image path starts with a '.' then trim it to exclude it
+   */
   static trimImagesPath(item, index, arr) {
     const item1 = item.trim();
     arr[index] = item1[0] === '.' ? item1.substring(1, item1.length) : item1;
   }
 
+  /*
+  Checks if the image is hosted in franklin
+   */
   static isMedia(path) {
     return path.trim().startsWith(Constants.MEDIA_PREFIX);
   }
@@ -72,7 +77,7 @@ export default class CreateManifest {
     const resourcesArr = Array.from(resources);
     const entriesJson = [];
     let lastModified = 0;
-    const [pageEntryJson, pageLastModified] = await CreateManifest.getPageJsonEntry(host, path);
+    const [pageEntryJson, pageLastModified] = await ManifestGenerator.getPageJsonEntry(host, path);
     if ((pageLastModified !== null) && (pageLastModified > lastModified)) {
       lastModified = pageLastModified;
     }
@@ -91,14 +96,15 @@ export default class CreateManifest {
       }
       const resourceEntry = {};
       resourceEntry.path = resourcesArr[i];
+      // timestamp is optional value, only add if last-modified available
       if (date) {
         const timestamp = new Date(date).getTime();
         if (timestamp > lastModified) {
           lastModified = timestamp;
         }
         resourceEntry.timestamp = timestamp;
-      } else if (CreateManifest.isMedia(resourceSubPath)) {
-        resourceEntry.hash = CreateManifest.getHashFromMedia(resourceSubPath);
+      } else if (ManifestGenerator.isMedia(resourceSubPath)) {
+        resourceEntry.hash = ManifestGenerator.getHashFromMedia(resourceSubPath);
       }
       entriesJson.push(resourceEntry);
     }

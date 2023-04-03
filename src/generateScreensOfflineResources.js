@@ -12,7 +12,7 @@
 
 import { outputFile } from 'fs-extra';
 import GitUtils from './git-utils.js';
-import CreateManifest from './createManifest.js';
+import ManifestGenerator from './createManifest.js';
 import Utils from './utils.js';
 
 export default class GenerateScreensOfflineResources {
@@ -60,9 +60,10 @@ export default class GenerateScreensOfflineResources {
     const channelsMap = GenerateScreensOfflineResources.createChannelMap(channelsData);
     const channelJson = {};
     channelJson.channels = [];
-    for (let i = 0; i < totalManifests; i += 1) {
+    for (let i = 0; i < totalManifests; i++) {
+      const data = manifestData[i];
       /* eslint-disable no-await-in-loop */
-      const [manifest, lastModified] = await CreateManifest.createManifest(host, manifestData[i]);
+      const [manifest, lastModified] = await ManifestGenerator.createManifest(host, data);
       const channelEntry = {};
       channelEntry.manifestPath = `${manifestData[i].path}.manifest.json`;
       channelEntry.lastModified = new Date(lastModified);
