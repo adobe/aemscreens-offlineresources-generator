@@ -67,6 +67,7 @@ export default class ManifestGenerator {
     const entry = {};
     entry.path = path;
     const date = resp.headers.get('last-modified');
+    // timestamp is optional value, only add if last-modified available
     if (date) {
       entry.timestamp = new Date(date).getTime();
     }
