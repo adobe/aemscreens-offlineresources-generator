@@ -1,7 +1,7 @@
 {
     "name": "@aem-screens/screens-offlineresources-generator",
     "version": "0.0.1",
-    "description": "Screens module to generate manifest and channels jsons for Screens channels created through Franklin",
+    "description": "Screens module to generate offline resources for Screens channels created through Franklin",
     "main": "src/index.js",
     "type": "module",
     "scripts": {
