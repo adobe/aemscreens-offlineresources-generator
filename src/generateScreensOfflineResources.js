@@ -16,7 +16,6 @@ import ManifestGenerator from './createManifest.js';
 import Utils from './utils.js';
 
 export default class GenerateScreensOfflineResources {
-
   /**
    * Parse command line arguments
    */
@@ -82,7 +81,7 @@ export default class GenerateScreensOfflineResources {
         channelEntry.externalId = channelsMap.get(manifestData[i].path).get('externalId')
           ? channelsMap.get(manifestData[i].path).get('externalId') : '';
         channelEntry.title = channelsMap.get(manifestData[i].path).get('title')
-            ? channelsMap.get(manifestData[i].path).get('title') : '';
+          ? channelsMap.get(manifestData[i].path).get('title') : '';
         channelEntry.liveUrl = channelsMap.get(manifestData[i].path).get('liveUrl')
           ? channelsMap.get(manifestData[i].path).get('liveUrl') : '';
       } else {
