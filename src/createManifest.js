@@ -41,26 +41,33 @@ export default class ManifestGenerator {
     return [manifestJson, lastModified];
   }
 
-  /*
-  If the image path starts with a '.' then trim it to exclude it
+  /**
+   * If the image path starts with a '.' then trim it to exclude it
+   *
    */
   static trimImagesPath(item, index, arr) {
     const item1 = item.trim();
     arr[index] = item1[0] === '.' ? item1.substring(1, item1.length) : item1;
   }
 
-  /*
-  Checks if the image is hosted in franklin
+  /**
+   * Checks if the image is hosted in franklin
    */
   static isMedia(path) {
     return path.trim().startsWith(Constants.MEDIA_PREFIX);
   }
 
+  /**
+   * For images hosted in Franklin, hash values are appended in name.
+   */
   static getHashFromMedia(path) {
     const path1 = path.trim();
     return path1.substring(Constants.MEDIA_PREFIX.length, path1.indexOf('.'));
   }
 
+  /**
+   * Creating Page entry for manifest
+   */
   static async getPageJsonEntry(host, path) {
     const pagePath = Utils.createUrl(host, path);
     const resp = await fetch(pagePath, { method: 'HEAD' });
@@ -74,6 +81,9 @@ export default class ManifestGenerator {
     return [entry, new Date(date).getTime()];
   }
 
+  /**
+   * Create the manifest entries
+   */
   static async createEntries(host, path, resources) {
     const resourcesArr = Array.from(resources);
     const entriesJson = [];

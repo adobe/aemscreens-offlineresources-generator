@@ -16,6 +16,10 @@ import ManifestGenerator from './createManifest.js';
 import Utils from './utils.js';
 
 export default class GenerateScreensOfflineResources {
+
+  /**
+   * Parse command line arguments
+   */
   static parseArgs(args) {
     const parsedArgs = {};
     args.forEach((arg) => {
@@ -35,9 +39,12 @@ export default class GenerateScreensOfflineResources {
     const host = `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
     const manifests = await Utils.fetchData(host, helixManifest);
     const channelsList = await Utils.fetchData(host, helixChannelsList);
-    await GenerateScreensOfflineResources.createManifests(host, manifests, channelsList);
+    await GenerateScreensOfflineResources.createOfflineResources(host, manifests, channelsList);
   }
 
+  /**
+   * Create ChannelMap from the helix channels list
+   */
   static createChannelMap(channelsData) {
     const channelsMap = new Map();
     for (let i = 0; i < channelsData.length; i++) {
@@ -46,12 +53,16 @@ export default class GenerateScreensOfflineResources {
       channelData.set('externalId', channelsData[i].externalId);
       channelData.set('liveUrl', channelsData[i].liveUrl);
       channelData.set('editUrl', channelsData[i].editUrl);
+      channelData.set('title', channelsData[i].title);
       channelsMap.set(channelPath, channelData);
     }
     return channelsMap;
   }
 
-  static async createManifests(host, jsonManifestData, channelsListData) {
+  /**
+   * Create offline resources
+   */
+  static async createOfflineResources(host, jsonManifestData, channelsListData) {
     const manifests = JSON.parse(jsonManifestData);
     const channelsList = JSON.parse(channelsListData);
     const totalManifests = parseInt(manifests.total, 10);
@@ -70,11 +81,14 @@ export default class GenerateScreensOfflineResources {
       if (channelsMap.get(manifestData[i].path)) {
         channelEntry.externalId = channelsMap.get(manifestData[i].path).get('externalId')
           ? channelsMap.get(manifestData[i].path).get('externalId') : '';
+        channelEntry.title = channelsMap.get(manifestData[i].path).get('title')
+            ? channelsMap.get(manifestData[i].path).get('title') : '';
         channelEntry.liveUrl = channelsMap.get(manifestData[i].path).get('liveUrl')
           ? channelsMap.get(manifestData[i].path).get('liveUrl') : '';
       } else {
         channelEntry.externalId = manifestData[i].path;
         channelEntry.liveUrl = Utils.createUrl(host, manifestData[i].path);
+        channelEntry.title = '';
       }
       channelJson.channels.push(channelEntry);
       outputFile(`${manifestData[i].path.substring(1, manifestData[i].path.length)}.manifest.json`, JSON.stringify(manifest, null, 2), (err) => {
