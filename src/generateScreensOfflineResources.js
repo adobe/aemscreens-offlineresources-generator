@@ -70,6 +70,8 @@ export default class GenerateScreensOfflineResources {
     const channelsMap = GenerateScreensOfflineResources.createChannelMap(channelsData);
     const channelJson = {};
     channelJson.channels = [];
+    channelJson.metadata = {};
+    channelJson.metadata.providerType = "franklin";
     for (let i = 0; i < totalManifests; i++) {
       const data = manifestData[i];
       /* eslint-disable no-await-in-loop */
