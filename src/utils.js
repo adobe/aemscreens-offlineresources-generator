@@ -13,7 +13,7 @@
 import fetch from 'node-fetch';
 
 export default class Utils {
-  static createUrl(host, path) {
+  static createUrlFromHostAndPath(host, path) {
     const hostNew = host.endsWith('/') ? host.slice(0, -1) : host;
     const pathNew = path.startsWith('/') ? path.slice(1) : path;
     const url = `${hostNew}/${pathNew}`;
@@ -21,7 +21,7 @@ export default class Utils {
   }
 
   static async fetchData(host, path) {
-    const url = Utils.createUrl(host, path);
+    const url = Utils.createUrlFromHostAndPath(host, path);
     let result = '';
     try {
       result = fetch(url)

@@ -15,87 +15,59 @@ import Constants from './constants.js';
 import Utils from './utils.js';
 
 export default class ManifestGenerator {
-  static async createManifest(host, data) {
-    /* eslint-disable object-curly-newline */
-    const { path = '', scripts = '[]', styles = '[]', assets = '[]', inlineImages = '[]', dependencies = '[]' } = data;
-    const scriptsList = JSON.parse(scripts);
-    const stylesList = JSON.parse(styles);
-    const assetsList = JSON.parse(assets);
-    assetsList.forEach(ManifestGenerator.trimImagesPath);
-    const inlineImagesList = JSON.parse(inlineImages);
-    inlineImagesList.forEach(ManifestGenerator.trimImagesPath);
-    const dependenciesList = JSON.parse(dependencies);
-
-    const resources = new Set([...scriptsList,
-      ...stylesList, ...assetsList,
-      ...inlineImagesList, ...dependenciesList]);
-    const [entries, lastModified] = await ManifestGenerator.createEntries(host, path, resources);
-    const currentTime = new Date().getTime();
-    const manifestJson = {};
-    manifestJson.version = '3.0';
-    manifestJson.contentDelivery = {};
-    manifestJson.contentDelivery.providers = [{ name: 'franklin', endpoint: '/' }];
-    manifestJson.contentDelivery.defaultProvider = 'franklin';
-    manifestJson.timestamp = currentTime;
-    manifestJson.entries = entries;
-    return [manifestJson, lastModified];
-  }
-
   /**
    * If the image path starts with a '.' then trim it to exclude it
    *
    */
-  static trimImagesPath(item, index, arr) {
+  static trimImagesPath = (item, index, arr) => {
     const item1 = item.trim();
     arr[index] = item1[0] === '.' ? item1.substring(1, item1.length) : item1;
-  }
+  };
 
   /**
    * Checks if the image is hosted in franklin
    */
-  static isMedia(path) {
-    return path.trim().startsWith(Constants.MEDIA_PREFIX);
-  }
+  static isMedia = (path) => path.trim().startsWith(Constants.MEDIA_PREFIX);
 
   /**
    * For images hosted in Franklin, hash values are appended in name.
    */
-  static getHashFromMedia(path) {
+  static getHashFromMedia = (path) => {
     const path1 = path.trim();
     return path1.substring(Constants.MEDIA_PREFIX.length, path1.indexOf('.'));
-  }
+  };
 
   /**
    * Creating Page entry for manifest
    */
-  static async getPageJsonEntry(host, path) {
-    const pagePath = Utils.createUrl(host, path);
+  static getPageJsonEntry = async (host, path, generateLoopingHtml) => {
+    const pagePath = Utils.createUrlFromHostAndPath(host, path);
     const resp = await fetch(pagePath, { method: 'HEAD' });
     const entry = {};
-    entry.path = path;
+    entry.path = generateLoopingHtml ? `/internal${path}.html` : path;
     const date = resp.headers.get('last-modified');
     // timestamp is optional value, only add if last-modified available
     if (date) {
       entry.timestamp = new Date(date).getTime();
     }
     return [entry, new Date(date).getTime()];
-  }
+  };
 
   /**
    * Create the manifest entries
    */
-  static async createEntries(host, path, resources) {
-    const resourcesArr = Array.from(resources);
+  static createEntries = async (host, path, pageResources, generateLoopingHtml) => {
+    const resourcesArr = Array.from(pageResources);
     const entriesJson = [];
     let lastModified = 0;
-    const [pageEntryJson, pageLastModified] = await ManifestGenerator.getPageJsonEntry(host, path);
-    if ((pageLastModified !== null) && (pageLastModified > lastModified)) {
+    const [pageEntryJson, pageLastModified] = await ManifestGenerator.getPageJsonEntry(host, path, generateLoopingHtml);
+    if (pageLastModified && (pageLastModified > lastModified)) {
       lastModified = pageLastModified;
     }
     entriesJson.push(pageEntryJson);
     for (let i = 0; i < resourcesArr.length; i++) {
       const resourceSubPath = resourcesArr[i].trim();
-      const resourcePath = Utils.createUrl(host, resourceSubPath);
+      const resourcePath = Utils.createUrlFromHostAndPath(host, resourceSubPath);
       /* eslint-disable no-await-in-loop */
       const resp = await fetch(resourcePath, { method: 'HEAD' });
       const date = resp.headers.get('last-modified');
@@ -121,5 +93,31 @@ export default class ManifestGenerator {
     }
 
     return [entriesJson, lastModified];
-  }
+  };
+
+  static createManifest = async (host, data, generateLoopingHtml) => {
+    /* eslint-disable object-curly-newline */
+    const { path = '', scripts = '[]', styles = '[]', assets = '[]', inlineImages = '[]', dependencies = '[]' } = data;
+    const scriptsList = JSON.parse(scripts);
+    const stylesList = JSON.parse(styles);
+    const assetsList = JSON.parse(assets);
+    assetsList.forEach(ManifestGenerator.trimImagesPath);
+    const inlineImagesList = JSON.parse(inlineImages);
+    inlineImagesList.forEach(ManifestGenerator.trimImagesPath);
+    const dependenciesList = JSON.parse(dependencies);
+
+    const pageResources = new Set([...scriptsList,
+      ...stylesList, ...assetsList,
+      ...inlineImagesList, ...dependenciesList]);
+    const [entries, lastModified] = await ManifestGenerator.createEntries(host, path, pageResources, generateLoopingHtml);
+    const currentTime = new Date().getTime();
+    const manifestJson = {};
+    manifestJson.version = '3.0';
+    manifestJson.contentDelivery = {};
+    manifestJson.contentDelivery.providers = [{ name: 'franklin', endpoint: '/' }];
+    manifestJson.contentDelivery.defaultProvider = 'franklin';
+    manifestJson.timestamp = currentTime;
+    manifestJson.entries = entries;
+    return [manifestJson, lastModified];
+  };
 }

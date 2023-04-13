@@ -17,6 +17,7 @@ module.exports = {
     'import/extensions': ['error', {
       js: 'always',
     }],
-    'no-plusplus': ["error", { "allowForLoopAfterthoughts": true }]
+    'no-plusplus': ["error", { "allowForLoopAfterthoughts": true }],
+    'max-len': ["error", { "code": 125 }]
   },
 };
