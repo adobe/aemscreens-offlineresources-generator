@@ -18,7 +18,6 @@ export default class ChannelHtmlGenerator {
   static createCSS = () => {
     let cssText = '';
     try {
-      // console.log(__dirname);
       const cssPath = process.cwd() + '/node_modules/@aem-screens/screens-offlineresources-generator/src/channelHtmlGenerator/carouselResources/carousel.css';
       cssText = fs.readFileSync(cssPath, 'utf8');
     } catch (err) {
@@ -159,12 +158,11 @@ export default class ChannelHtmlGenerator {
           console.warn(`Error while processing sheet ${JSON.stringify(sheetDetails[sheetIndex])}`, err);
         }
       }
-      console.log(JSON.stringify(assets));
       const carouselHtml = ChannelHtmlGenerator.createCarousel(assets);
       console.log('HTML generated successfully');
       outputFile(`internal${channelPath}.html`, carouselHtml, (err) => {
         if (err) {
-          console.log(err);
+          console.error(err);
         }
       });
       console.log(`HTML saved at internal${channelPath}.html`);
