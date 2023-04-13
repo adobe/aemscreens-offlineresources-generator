@@ -48,7 +48,7 @@ export default class CreateManifest {
     const pagePath = url + path;
     const resp = await fetch(pagePath, { method: 'HEAD' });
     const entry = {};
-    entry.path = path;
+    entry.path = '/internal' + path + '.html';
     const date = resp.headers.get('last-modified');
     if (date) {
       entry.timestamp = new Date(date).getTime();

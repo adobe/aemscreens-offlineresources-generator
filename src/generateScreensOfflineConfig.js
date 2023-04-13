@@ -1,7 +1,8 @@
-import fetch from 'node-fetch';
 import { outputFile } from 'fs-extra';
 import GitUtils from './git-utils.js';
 import CreateManifest from './createManifest.js';
+import ChannelHtmlGenerator from './channelHtmlGenerator/channelHtmlGenerator.js';
+import FetchUtils from "./utils/fetchUtils.js";
 
 export default class GenerateScreensOfflineConfig {
   static parseArgs(args) {
@@ -23,25 +24,23 @@ export default class GenerateScreensOfflineConfig {
     const url = `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
     const helixManifestPath = `${url}${helixManifest}`;
     const helixChannelsListPath = `${url}${helixChannelsList}`;
-    const manifests = await GenerateScreensOfflineConfig.fetchData(helixManifestPath);
-    const channelsList = await GenerateScreensOfflineConfig.fetchData(helixChannelsListPath);
+    const manifests = await FetchUtils.fetchData(helixManifestPath);
+    const channelsList = await FetchUtils.fetchData(helixChannelsListPath);
+    if (parsedArgs.generateLoopingHtml) {
+      await ChannelHtmlGenerator.generateChannelHTML(JSON.parse(manifests), url);
+    }
     await GenerateScreensOfflineConfig.createManifests(url, manifests, channelsList);
   }
 
-  static async fetchData(path) {
-    let result = '';
+  static processLiveUrl(liveUrl) {
     try {
-      result = fetch(path)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`request to fetch ${path} failed with status code ${response.status}`);
-          }
-          return response.text();
-        });
-      return Promise.resolve(result);
-    } catch (e) {
-      throw new Error(`request to fetch ${path} failed with status code with error ${e}`);
+      const url = new URL(liveUrl);
+      url.pathname = `/internal${url.pathname}.html`;
+      return url.toString();
+    } catch (err) {
+      console.warn(`Invalid live url: ${liveUrl}`, err);
     }
+    return liveUrl;
   }
 
   static createChannelMap(channelsData) {
@@ -50,7 +49,7 @@ export default class GenerateScreensOfflineConfig {
       const channelPath = channelsData[i].path;
       const channelData = new Map();
       channelData.set('externalId', channelsData[i].externalId);
-      channelData.set('liveUrl', channelsData[i].liveUrl);
+      channelData.set('liveUrl', GenerateScreensOfflineConfig.processLiveUrl(channelsData[i].liveUrl));
       channelData.set('editUrl', channelsData[i].editUrl);
       channelsMap.set(channelPath, channelData);
     }
@@ -70,7 +69,7 @@ export default class GenerateScreensOfflineConfig {
       /* eslint-disable no-await-in-loop */
       const [manifest, lastModified] = await CreateManifest.createManifest(url, manifestData[i]);
       const channelEntry = {};
-      channelEntry.manifestPath = `${manifestData[i].path}.manifest.json`;
+      channelEntry.manifestPath = `/internal${manifestData[i].path}.manifest.json`;
       channelEntry.lastModified = new Date(lastModified);
       if (channelsMap.get(manifestData[i].path)) {
         channelEntry.externalId = channelsMap.get(manifestData[i].path).get('externalId');
@@ -80,7 +79,7 @@ export default class GenerateScreensOfflineConfig {
         channelEntry.liveUrl = `${url}${manifestData[i].path}`;
       }
       channelJson.channels.push(channelEntry);
-      outputFile(`${manifestData[i].path.substring(1, manifestData[i].path.length)}.manifest.json`, JSON.stringify(manifest, null, 2), (err) => {
+      outputFile(`internal${manifestData[i].path}.manifest.json`, JSON.stringify(manifest, null, 2), (err) => {
         if (err) {
           /* eslint-disable no-console */
           console.log(err);
