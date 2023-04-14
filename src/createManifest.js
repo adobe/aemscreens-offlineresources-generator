@@ -40,29 +40,32 @@ export default class ManifestGenerator {
   /**
    * Creating Page entry for manifest
    */
-  static getPageJsonEntry = async (host, path, generateLoopingHtml) => {
+  static getPageJsonEntry = async (host, path, generateLoopingHtml, updateHtml) => {
     const pagePath = Utils.createUrlFromHostAndPath(host, path);
     const resp = await fetch(pagePath, { method: 'HEAD' });
     const entry = {};
     entry.path = generateLoopingHtml ? `/internal${path}.html` : path;
     const date = resp.headers.get('last-modified');
     // timestamp is optional value, only add if last-modified available
-    if (date) {
+    if (updateHtml) {
+      entry.timestamp = new Date().getTime();
+    } else if (date) {
       entry.timestamp = new Date(date).getTime();
     }
-    return [entry, new Date(date).getTime()];
+    return entry;
   };
 
   /**
    * Create the manifest entries
    */
-  static createEntries = async (host, path, pageResources, generateLoopingHtml) => {
+  static createEntries = async (host, path, pageResources, generateLoopingHtml, updateHtml) => {
     const resourcesArr = Array.from(pageResources);
     const entriesJson = [];
     let lastModified = 0;
-    const [pageEntryJson, pageLastModified] = await ManifestGenerator.getPageJsonEntry(host, path, generateLoopingHtml);
-    if (pageLastModified && (pageLastModified > lastModified)) {
-      lastModified = pageLastModified;
+    const pageEntryJson = await ManifestGenerator
+      .getPageJsonEntry(host, path, generateLoopingHtml, updateHtml);
+    if (pageEntryJson.timestamp && (pageEntryJson.timestamp > lastModified)) {
+      lastModified = pageEntryJson.timestamp;
     }
     entriesJson.push(pageEntryJson);
     for (let i = 0; i < resourcesArr.length; i++) {
@@ -95,9 +98,10 @@ export default class ManifestGenerator {
     return [entriesJson, lastModified];
   };
 
-  static createManifest = async (host, data, generateLoopingHtml) => {
+  static createManifest = async (host, data, generateLoopingHtml, updateHtml) => {
     /* eslint-disable object-curly-newline */
-    const { path = '', scripts = '[]', styles = '[]', assets = '[]', inlineImages = '[]', dependencies = '[]' } = data;
+    const { path = '', scripts = '[]', styles = '[]', assets = '[]',
+      inlineImages = '[]', dependencies = '[]' } = data;
     const scriptsList = JSON.parse(scripts);
     const stylesList = JSON.parse(styles);
     const assetsList = JSON.parse(assets);
@@ -109,7 +113,8 @@ export default class ManifestGenerator {
     const pageResources = new Set([...scriptsList,
       ...stylesList, ...assetsList,
       ...inlineImagesList, ...dependenciesList]);
-    const [entries, lastModified] = await ManifestGenerator.createEntries(host, path, pageResources, generateLoopingHtml);
+    const [entries, lastModified] = await ManifestGenerator
+      .createEntries(host, path, pageResources, generateLoopingHtml, updateHtml);
     const currentTime = new Date().getTime();
     const manifestJson = {};
     manifestJson.version = '3.0';

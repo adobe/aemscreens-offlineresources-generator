@@ -11,7 +11,7 @@
  */
 
 import { outputFile } from 'fs-extra';
-import GitUtils from './git-utils.js';
+import GitUtils from './gitUtils.js';
 import ManifestGenerator from './createManifest.js';
 import Utils from './utils.js';
 
@@ -53,7 +53,8 @@ export default class GenerateScreensOfflineResources {
       const channelData = {};
       channelData.externalId = channelsData[i].externalId;
       if (generateLoopingHtml) {
-        channelData.liveUrl = GenerateScreensOfflineResources.processLiveUrl(channelsData[i].liveUrl);
+        channelData.liveUrl = GenerateScreensOfflineResources
+          .processLiveUrl(channelsData[i].liveUrl);
       } else {
         channelData.liveUrl = channelsData[i].liveUrl;
       }
@@ -67,7 +68,13 @@ export default class GenerateScreensOfflineResources {
   /**
    * Create offline resources
    */
-  static createOfflineResources = async (host, jsonManifestData, channelsListData, generateLoopingHtml) => {
+  static createOfflineResources = async (
+    host,
+    jsonManifestData,
+    channelsListData,
+    generateLoopingHtml,
+    updatedHtml
+  ) => {
     const manifests = JSON.parse(jsonManifestData);
     const channelsList = JSON.parse(channelsListData);
     const totalManifests = parseInt(manifests.total, 10);
@@ -80,8 +87,10 @@ export default class GenerateScreensOfflineResources {
     channelJson.metadata.providerType = 'franklin';
     for (let i = 0; i < totalManifests; i++) {
       const data = manifestData[i];
+      const updateHtml = updatedHtml.includes(data.path);
       /* eslint-disable no-await-in-loop */
-      const [manifest, lastModified] = await ManifestGenerator.createManifest(host, data, generateLoopingHtml);
+      const [manifest, lastModified] = await ManifestGenerator
+        .createManifest(host, data, generateLoopingHtml, updateHtml);
       const channelEntry = {};
       if (generateLoopingHtml) {
         channelEntry.manifestPath = `/internal${manifestData[i].path}.manifest.json`;
@@ -126,7 +135,8 @@ export default class GenerateScreensOfflineResources {
   static run = async (args) => {
     const parsedArgs = GenerateScreensOfflineResources.parseArgs(args);
     const helixManifest = parsedArgs.helixManifest ? `${parsedArgs.helixManifest}.json` : '/manifest.json';
-    const helixChannelsList = parsedArgs.helixChannelsList ? `${parsedArgs.helixChannelsList}.json` : '/channels.json';
+    const helixChannelsList = parsedArgs.helixChannelsList
+      ? `${parsedArgs.helixChannelsList}.json` : '/channels.json';
     let generateLoopingHtml = false;
     if (parsedArgs.generateLoopingHtml && parsedArgs.generateLoopingHtml === 'true') {
       generateLoopingHtml = true;
@@ -136,6 +146,8 @@ export default class GenerateScreensOfflineResources {
     const host = `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
     const manifests = await Utils.fetchData(host, helixManifest);
     const channelsList = await Utils.fetchData(host, helixChannelsList);
-    await GenerateScreensOfflineResources.createOfflineResources(host, manifests, channelsList, generateLoopingHtml);
+    const updatedHtml = [];
+    await GenerateScreensOfflineResources
+      .createOfflineResources(host, manifests, channelsList, generateLoopingHtml, updatedHtml);
   };
 }

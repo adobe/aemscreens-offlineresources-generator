@@ -18,6 +18,7 @@ module.exports = {
       js: 'always',
     }],
     'no-plusplus': ["error", { "allowForLoopAfterthoughts": true }],
-    'max-len': ["error", { "code": 125 }]
+    'max-len': ["error", { "code": 120 }],
+    'comma-dangle': ["error", {"functions": "never"}]
   },
 };

@@ -24,7 +24,7 @@ export default class GitUtils {
    * @param {string} dir working tree directory path of the git repo
    * @returns {Promise<string>} `origin` remote url
    */
-  static async getOrigin(dir) {
+  static getOrigin = async (dir) => {
     try {
       // const remotes = await git.listRemotes({ fs, dir });
       const rmt = (await git.listRemotes({ fs, dir })).find((entry) => entry.remote === 'origin');
@@ -35,7 +35,7 @@ export default class GitUtils {
       console.log(`error while getting list remote ${e}`);
       return '';
     }
-  }
+  };
 
   /**
    * Same as #getOrigin() but returns a `GitUrl` instance instead of a string.
@@ -44,10 +44,10 @@ export default class GitUtils {
    * @returns {Promise<GitUrl>} `origin` remote url ot {@code null} if not available
    * @param {GitUrl~JSON} defaults Defaults for creating the git url.
    */
-  static async getOriginURL(dir, defaults) {
+  static getOriginURL = async (dir, defaults) => {
     const origin = await GitUtils.getOrigin(dir);
     return origin ? new GitUrl(origin, defaults) : null;
-  }
+  };
 
   /**
    * Returns the name of the current branch. If `HEAD` is at a tag, the name of the tag
@@ -56,7 +56,7 @@ export default class GitUtils {
    * @param {string} dir working tree directory path of the git repo
    * @returns {Promise<string>} current branch or tag
    */
-  static async getBranch(dir) {
+  static getBranch = async (dir) => {
     // current branch name
     const currentBranch = await git.currentBranch({ fs, dir, fullname: false });
     // current commit sha
@@ -70,7 +70,7 @@ export default class GitUtils {
       /* eslint-disable no-await-in-loop */
       const oid = await git.resolveRef({ fs, dir, ref: tag });
       const obj = await git.readObject({
-        fs, dir, oid, cache,
+        fs, dir, oid, cache
       });
       const commitSha = obj.type === 'tag'
         ? await git.resolveRef({ fs, dir, ref: obj.object.object }) // annotated tag
@@ -81,5 +81,27 @@ export default class GitUtils {
     }
     // HEAD is not at a tag, return current branch
     return currentBranch;
-  }
+  };
+
+  /**
+   * Determines whether the working tree directory contains uncommitted or unstaged changes.
+   *
+   * @param {string} dir working tree directory path of the git repo
+   * @param {string} [homedir] optional users home directory
+   * @returns {Promise<boolean>} `true` if there are uncommitted/unstaged changes; otherwise `false`
+   */
+  static isFileDirty = async (filePath, dir = './') => {
+    // see https://isomorphic-git.org/docs/en/statusMatrix
+    const HEAD = 1;
+    const WORKDIR = 2;
+    const STAGE = 3;
+    const matrix = await git.statusMatrix({ fs, dir, cache });
+    const modified = matrix
+      .filter((row) => !(row[HEAD] === row[WORKDIR] && row[WORKDIR] === row[STAGE]));
+    if (modified.length === 0) {
+      return false;
+    }
+    const findFile = modified.find((row) => row[0] === filePath);
+    return !!findFile;
+  };
 }
