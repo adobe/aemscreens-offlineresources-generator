@@ -41,15 +41,16 @@ export default class ManifestGenerator {
    * Creating Page entry for manifest
    */
   static getPageJsonEntry = async (host, path, generateLoopingHtml, updateHtml) => {
-    const pagePath = Utils.createUrlFromHostAndPath(host, path);
+    const entryPath = generateLoopingHtml ? `/internal${path}.html` : path;
+    const pagePath = Utils.createUrlFromHostAndPath(host, entryPath);
     const resp = await fetch(pagePath, { method: 'HEAD' });
     const entry = {};
-    entry.path = generateLoopingHtml ? `/internal${path}.html` : path;
-    const date = resp.headers.get('last-modified');
+    entry.path = entryPath;
     // timestamp is optional value, only add if last-modified available
     if (updateHtml) {
       entry.timestamp = new Date().getTime();
-    } else if (date) {
+    } else if (resp.ok && resp.headers.get('last-modified')) {
+      const date = resp.headers.get('last-modified');
       entry.timestamp = new Date(date).getTime();
     }
     return entry;
