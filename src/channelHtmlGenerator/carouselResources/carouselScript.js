@@ -148,12 +148,10 @@ const scriptText = async (assets) => {
             }
         }
     }
-
     function incrementAdIndex() {
         currentIndex = (currentIndex + 1) % assets.length;
     }
-
-    await playAds();
+    playAds();
 }
 
 export { scriptText };
