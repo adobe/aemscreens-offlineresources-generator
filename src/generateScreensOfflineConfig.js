@@ -1,5 +1,5 @@
 import { outputFile } from 'fs-extra';
-import GitUtils from './git-utils.js';
+import GitUtils from './utils/gitUtils.js';
 import CreateManifest from './createManifest.js';
 import ChannelHtmlGenerator from './channelHtmlGenerator/channelHtmlGenerator.js';
 import FetchUtils from "./utils/fetchUtils.js";
@@ -27,7 +27,8 @@ export default class GenerateScreensOfflineConfig {
     const manifests = await FetchUtils.fetchData(helixManifestPath);
     const channelsList = await FetchUtils.fetchData(helixChannelsListPath);
     if (parsedArgs.generateLoopingHtml) {
-      await ChannelHtmlGenerator.generateChannelHTML(JSON.parse(manifests), url);
+      const htmls = await ChannelHtmlGenerator.generateChannelHTML(JSON.parse(manifests), url);
+      console.log(JSON.stringify(htmls));
     }
     await GenerateScreensOfflineConfig.createManifests(url, manifests, channelsList);
   }
@@ -51,6 +52,7 @@ export default class GenerateScreensOfflineConfig {
       channelData.set('externalId', channelsData[i].externalId);
       channelData.set('liveUrl', GenerateScreensOfflineConfig.processLiveUrl(channelsData[i].liveUrl));
       channelData.set('editUrl', channelsData[i].editUrl);
+      channelData.set('title', channelsData[i].title);
       channelsMap.set(channelPath, channelData);
     }
     return channelsMap;
@@ -74,9 +76,11 @@ export default class GenerateScreensOfflineConfig {
       if (channelsMap.get(manifestData[i].path)) {
         channelEntry.externalId = channelsMap.get(manifestData[i].path).get('externalId');
         channelEntry.liveUrl = channelsMap.get(manifestData[i].path).get('liveUrl');
+        channelEntry.title = channelsMap.get(manifestData[i].path).get('title');
       } else {
         channelEntry.externalId = manifestData[i].path;
         channelEntry.liveUrl = `${url}${manifestData[i].path}`;
+        channelEntry.title = ' ';
       }
       channelJson.channels.push(channelEntry);
       outputFile(`internal${manifestData[i].path}.manifest.json`, JSON.stringify(manifest, null, 2), (err) => {

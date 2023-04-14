@@ -1,4 +1,4 @@
-const scriptText = (assets) => {
+const scriptText = async (assets) => {
     let currentIndex = 0;
     const parseStartDateString = (dateString, isGMT) => {
         if (!dateString) {
@@ -63,8 +63,29 @@ const scriptText = (assets) => {
         }
         return dateObj;
     }
-    function playAds() {
+
+    const checkForPlayableAssets = async (assets = []) => {
+        let isActive = false;
+        assets.forEach((asset) => {
+            const launchStartDate = parseStartDateString(asset.launchStartDate, asset.isGMT);
+            const launchEndDate = parseEndDateString(asset.launchEndDate, asset.isGMT);
+            const startTime = parseStartTimeString(asset.startTime, asset.isGMT);
+            const endTime = parseEndTimeString(asset.endTime, asset.isGMT);
+            const now = new Date();
+            if (now >= launchStartDate && now <= launchEndDate
+                && now >= startTime && now <= endTime) {
+                isActive = true;
+            }
+        });
+        if (!isActive) {
+            await new Promise(r => setTimeout(r, 5000));
+            await checkForPlayableAssets(assets);
+        }
+    }
+
+    async function playAds() {
         const container = document.getElementById('carousel-container');
+        await checkForPlayableAssets(assets);
         while (currentIndex < assets.length) {
             const asset = assets[currentIndex];
             const launchStartDate = parseStartDateString(asset.launchStartDate, asset.isGMT);
@@ -72,17 +93,16 @@ const scriptText = (assets) => {
             const startTime = parseStartTimeString(asset.startTime, asset.isGMT);
             const endTime = parseEndTimeString(asset.endTime, asset.isGMT);
             const now = new Date();
-            console.log(`lsd-${launchStartDate}, \n led-${launchEndDate}, \n st-${startTime}, \n et-${endTime}`);
             if (now >= launchStartDate && now <= launchEndDate
                 && now >= startTime && now <= endTime) {
                 if (asset.type === 'image') {
                     const img = new Image();
                     img.src = asset.link;
-                    img.onerror = function() {
+                    img.onerror = function () {
                         incrementAdIndex();
                         playAds();
                     };
-                    img.onload = function() {
+                    img.onload = function () {
                         container.innerHTML = '';
                         container.appendChild(img);
                         setTimeout(() => {
@@ -99,11 +119,11 @@ const scriptText = (assets) => {
                 } else if (asset.type === 'video') {
                     const video = document.createElement('video');
                     video.src = asset.link;
-                    video.onerror = function() {
+                    video.onerror = function () {
                         incrementAdIndex();
                         playAds();
                     };
-                    video.onended = function() {
+                    video.onended = function () {
                         video.classList.remove('visible');
                         setTimeout(() => {
                             container.removeChild(video);
@@ -111,7 +131,7 @@ const scriptText = (assets) => {
                             playAds();
                         }, 10);
                     };
-                    video.oncanplay = function() {
+                    video.oncanplay = function () {
                         container.innerHTML = '';
                         container.appendChild(video);
                         video.play();
@@ -128,10 +148,12 @@ const scriptText = (assets) => {
             }
         }
     }
+
     function incrementAdIndex() {
         currentIndex = (currentIndex + 1) % assets.length;
     }
-    playAds();
+
+    await playAds();
 }
 
 export { scriptText };

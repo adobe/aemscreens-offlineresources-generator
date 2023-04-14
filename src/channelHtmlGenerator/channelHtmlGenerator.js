@@ -6,6 +6,7 @@ import { outputFile } from 'fs-extra';
 import {scriptText} from './carouselResources/carouselScript.js';
 import DateUtils from './../utils/dateUtils.js';
 import FetchUtils from '../utils/fetchUtils.js';
+import GitUtils from "../utils/gitUtils.js";
 
 export default class ChannelHtmlGenerator {
   static getContentType = async (assetLink) => {
@@ -18,7 +19,8 @@ export default class ChannelHtmlGenerator {
   static createCSS = () => {
     let cssText = '';
     try {
-      const cssPath = process.cwd() + '/node_modules/@aem-screens/screens-offlineresources-generator/src/channelHtmlGenerator/carouselResources/carousel.css';
+      const cssPath = process.cwd() + '/node_modules/@aem-screens/screens-offlineresources-generator/' +
+          'src/channelHtmlGenerator/carouselResources/carousel.css';
       cssText = fs.readFileSync(cssPath, 'utf8');
     } catch (err) {
       console.error(err);
@@ -111,7 +113,7 @@ export default class ChannelHtmlGenerator {
       console.error(`HTML generation failed. Invalid channels: ${JSON.stringify(channels)}`);
       return;
     }
-    await Promise.all(channels.data.map(async (channelData) => {
+    return await Promise.all(channels.data.map(async (channelData) => {
       if (!channelData) {
         console.warn(`Invalid channel data during html generation: ${channelData}`);
         return;
@@ -166,6 +168,10 @@ export default class ChannelHtmlGenerator {
         }
       });
       console.log(`HTML saved at internal${channelPath}.html`);
+      if (await GitUtils.isFileDirty(`internal${channelPath}.html`)) {
+        console.log('file dirty');
+        return channelPath;
+      }
     }));
   }
 }

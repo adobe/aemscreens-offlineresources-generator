@@ -70,4 +70,26 @@ export default class GitUtils {
     // HEAD is not at a tag, return current branch
     return currentBranch;
   }
+
+  /**
+   * Determines whether the working tree directory contains uncommitted or unstaged changes.
+   *
+   * @param filePath file path
+   * @param {string} dir root path
+   * @returns {Promise<boolean>} `true` if there are uncommitted/unstaged changes; otherwise `false`
+   */
+  static isFileDirty = async (filePath, dir = './') => {
+    // see https://isomorphic-git.org/docs/en/statusMatrix
+    const HEAD = 1;
+    const WORKDIR = 2;
+    const STAGE = 3;
+    const matrix = await git.statusMatrix({ fs, dir, cache });
+    const modified = matrix
+        .filter((row) => !(row[HEAD] === row[WORKDIR] && row[WORKDIR] === row[STAGE]));
+    if (modified.length === 0) {
+      return false;
+    }
+    const findFile = modified.find((row) => row[0] === filePath);
+    return !!findFile;
+  };
 }
