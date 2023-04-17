@@ -60,6 +60,7 @@ export default class ChannelHtmlGenerator {
     if (!container || !container.children()) {
       return sheetDetails;
     }
+    // fetch from google doc format
     Array.from(container.children()).forEach((element) => {
       try {
         if (element.children[1].children[0].data && element.children[3].children[0].data) {
@@ -72,6 +73,28 @@ export default class ChannelHtmlGenerator {
         console.warn(`Invalid word doc row`, err);
       }
     });
+    if (sheetDetails.length === 0) {
+      // fetch from sharepoint format now
+      let skipParentProcessing = true;
+      try {
+        container.find('div:first-child').each((index, element) => {
+          if (skipParentProcessing) {
+            skipParentProcessing = false;
+            return;
+          }
+          const name = $(element).text();
+          const link = $(element).next().text();
+          if (name && link) {
+            sheetDetails.push({
+              name: name,
+              link: link
+            });
+          }
+        });
+      } catch (err) {
+        console.warn(`Invalid word doc row`, err);
+      }
+    }
     return sheetDetails;
   }
 

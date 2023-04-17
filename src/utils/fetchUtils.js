@@ -9,19 +9,7 @@ export default class FetchUtils {
 
     static async fetchData(host, path) {
         const url = FetchUtils.createUrlFromHostAndPath(host, path);
-        let result = '';
-        try {
-            result = fetch(url)
-                .then((response) => {
-                    if (!response.ok) {
-                        throw new Error(`request to fetch ${path} failed with status code ${response.status}`);
-                    }
-                    return response.text();
-                });
-            return Promise.resolve(result);
-        } catch (e) {
-            throw new Error(`request to fetch ${path} failed with status code with error ${e}`);
-        }
+        return await FetchUtils.fetchDataFromUrl(url);
     }
 
     static async fetchDataFromUrl(url) {
@@ -30,13 +18,13 @@ export default class FetchUtils {
             result = fetch(url)
                 .then((response) => {
                     if (!response.ok) {
-                        throw new Error(`request to fetch ${path} failed with status code ${response.status}`);
+                        throw new Error(`request to fetch ${url} failed with status code ${response.status}`);
                     }
                     return response.text();
                 });
             return Promise.resolve(result);
         } catch (e) {
-            throw new Error(`request to fetch ${path} failed with status code with error ${e}`);
+            throw new Error(`request to fetch ${url} failed with status code with error ${e}`);
         }
     }
 }
