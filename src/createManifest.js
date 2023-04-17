@@ -65,7 +65,7 @@ export default class ManifestGenerator {
     let lastModified = 0;
     const pageEntryJson = await ManifestGenerator
       .getPageJsonEntry(host, path, generateLoopingHtml, updateHtml);
-    if (pageEntryJson.timestamp && (pageEntryJson.timestamp > lastModified)) {
+    if (pageEntryJson.timestamp && pageEntryJson.timestamp > lastModified) {
       lastModified = pageEntryJson.timestamp;
     }
     entriesJson.push(pageEntryJson);
@@ -74,7 +74,6 @@ export default class ManifestGenerator {
       const resourcePath = FetchUtils.createUrlFromHostAndPath(host, resourceSubPath);
       /* eslint-disable no-await-in-loop */
       const resp = await fetch(resourcePath, { method: 'HEAD' });
-      const date = resp.headers.get('last-modified');
       if (!resp.ok) {
         /* eslint-disable no-console */
         console.log(`resource ${resourcePath} not available for channel ${path}`);
@@ -84,6 +83,7 @@ export default class ManifestGenerator {
       const resourceEntry = {};
       resourceEntry.path = resourcesArr[i];
       // timestamp is optional value, only add if last-modified available
+      const date = resp.headers.get('last-modified');
       if (date) {
         const timestamp = new Date(date).getTime();
         if (timestamp > lastModified) {
