@@ -138,7 +138,7 @@ export default class GenerateScreensOfflineResources {
     const helixChannelsList = parsedArgs.helixChannelsList
       ? `${parsedArgs.helixChannelsList}.json` : '/channels.json';
     let generateLoopingHtml = false;
-    if (parsedArgs.generateLoopingHtml && parsedArgs.generateLoopingHtml === 'true') {
+    if (parsedArgs.generateLoopingHtml === 'true') {
       generateLoopingHtml = true;
     }
     const gitUrl = await GitUtils.getOriginURL(process.cwd(), { });
