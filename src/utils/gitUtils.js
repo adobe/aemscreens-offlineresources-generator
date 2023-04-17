@@ -73,8 +73,8 @@ export default class GitUtils {
         fs, dir, oid, cache
       });
       const commitSha = obj.type === 'tag'
-        ? await git.resolveRef({ fs, dir, ref: obj.object.object }) // annotated tag
-        : oid; // lightweight tag
+          ? await git.resolveRef({ fs, dir, ref: obj.object.object }) // annotated tag
+          : oid; // lightweight tag
       if (commitSha === rev) {
         return tag;
       }
@@ -97,7 +97,7 @@ export default class GitUtils {
     const STAGE = 3;
     const matrix = await git.statusMatrix({ fs, dir, cache });
     const modified = matrix
-      .filter((row) => !(row[HEAD] === row[WORKDIR] && row[WORKDIR] === row[STAGE]));
+        .filter((row) => !(row[HEAD] === row[WORKDIR] && row[WORKDIR] === row[STAGE]));
     if (modified.length === 0) {
       return false;
     }

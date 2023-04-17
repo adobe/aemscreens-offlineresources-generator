@@ -11,9 +11,10 @@
  */
 
 import { outputFile } from 'fs-extra';
-import GitUtils from './gitUtils.js';
+import GitUtils from './utils/gitUtils.js';
 import ManifestGenerator from './createManifest.js';
-import Utils from './utils.js';
+import FetchUtils from './utils/fetchUtils.js';
+import ChannelHtmlGenerator from './channelHtmlGenerator/channelHtmlGenerator.js';
 
 export default class GenerateScreensOfflineResources {
   /**
@@ -73,7 +74,7 @@ export default class GenerateScreensOfflineResources {
     jsonManifestData,
     channelsListData,
     generateLoopingHtml,
-    updatedHtml
+    updatedHtml = []
   ) => {
     const manifests = JSON.parse(jsonManifestData);
     const channelsList = JSON.parse(channelsListData);
@@ -107,7 +108,7 @@ export default class GenerateScreensOfflineResources {
           ? channelsMap.get(manifestData[i].path).liveUrl : '';
       } else {
         channelEntry.externalId = manifestData[i].path;
-        channelEntry.liveUrl = Utils.createUrlFromHostAndPath(host, manifestData[i].path);
+        channelEntry.liveUrl = FetchUtils.createUrlFromHostAndPath(host, manifestData[i].path);
         channelEntry.title = '';
       }
       channelJson.channels.push(channelEntry);
@@ -144,9 +145,12 @@ export default class GenerateScreensOfflineResources {
     const gitUrl = await GitUtils.getOriginURL(process.cwd(), { });
     const gitBranch = await GitUtils.getBranch(process.cwd());
     const host = `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
-    const manifests = await Utils.fetchData(host, helixManifest);
-    const channelsList = await Utils.fetchData(host, helixChannelsList);
-    const updatedHtml = [];
+    const manifests = await FetchUtils.fetchData(host, helixManifest);
+    const channelsList = await FetchUtils.fetchData(host, helixChannelsList);
+    let updatedHtml = [];
+    if (parsedArgs.generateLoopingHtml === 'true') {
+      updatedHtml = await ChannelHtmlGenerator.generateChannelHTML(JSON.parse(manifests), host);
+    }
     await GenerateScreensOfflineResources
       .createOfflineResources(host, manifests, channelsList, generateLoopingHtml, updatedHtml);
   };

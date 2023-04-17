@@ -12,7 +12,7 @@
 
 import fetch from 'node-fetch';
 import Constants from './constants.js';
-import Utils from './utils.js';
+import FetchUtils from "./utils/fetchUtils.js";
 
 export default class ManifestGenerator {
   /**
@@ -41,15 +41,16 @@ export default class ManifestGenerator {
    * Creating Page entry for manifest
    */
   static getPageJsonEntry = async (host, path, generateLoopingHtml, updateHtml) => {
-    const pagePath = Utils.createUrlFromHostAndPath(host, path);
+    const entryPath = generateLoopingHtml ? `/internal${path}.html` : path;
+    const pagePath = FetchUtils.createUrlFromHostAndPath(host, entryPath);
     const resp = await fetch(pagePath, { method: 'HEAD' });
     const entry = {};
-    entry.path = generateLoopingHtml ? `/internal${path}.html` : path;
-    const date = resp.headers.get('last-modified');
+    entry.path = entryPath;
     // timestamp is optional value, only add if last-modified available
     if (updateHtml) {
       entry.timestamp = new Date().getTime();
-    } else if (date) {
+    } else if (resp.ok && resp.headers.get('last-modified')) {
+      const date = resp.headers.get('last-modified');
       entry.timestamp = new Date(date).getTime();
     }
     return entry;
@@ -70,7 +71,7 @@ export default class ManifestGenerator {
     entriesJson.push(pageEntryJson);
     for (let i = 0; i < resourcesArr.length; i++) {
       const resourceSubPath = resourcesArr[i].trim();
-      const resourcePath = Utils.createUrlFromHostAndPath(host, resourceSubPath);
+      const resourcePath = FetchUtils.createUrlFromHostAndPath(host, resourceSubPath);
       /* eslint-disable no-await-in-loop */
       const resp = await fetch(resourcePath, { method: 'HEAD' });
       const date = resp.headers.get('last-modified');
