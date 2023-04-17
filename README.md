@@ -1,1 +1,1 @@
-# screens-manifest-generator
+# screens-offlineresources-generator
