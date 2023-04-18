@@ -9,12 +9,6 @@ import FetchUtils from '../utils/fetchUtils.js';
 import GitUtils from "../utils/gitUtils.js";
 
 export default class ChannelHtmlGenerator {
-  static getContentType = async (assetLink) => {
-    const resp = await fetch(assetLink, {method: 'HEAD'});
-    if (resp && resp.headers) {
-      return resp.headers.get('content-type');
-    }
-  }
 
   static createCSS = () => {
     let cssText = '';
@@ -98,7 +92,13 @@ export default class ChannelHtmlGenerator {
     return sheetDetails;
   }
 
-  static processContentType = (contentType) => {
+  static validateLinkAndGetContentType = async (link) => {
+    const response = await fetch(link, {method: 'HEAD'});
+    if (response.status !== 200) {
+      throw new Error(`Invalid asset link: ${link}, Received status: ${response.status}`);
+    }
+    let contentType = response.headers.get('content-type');
+    console.log(`Content type for link ${link}: ${contentType}`);
     let type;
     if (contentType && contentType.includes('video')) {
       type = 'video';
@@ -108,13 +108,6 @@ export default class ChannelHtmlGenerator {
       throw new Error(`Invalid asset content-type: ${contentType}`);
     }
     return type;
-  }
-
-  static validateAssetLink = async (link) => {
-    const response = await fetch(link, {method: 'HEAD'});
-    if (response.status !== 200) {
-      throw new Error(`Invalid asset link: ${link}`);
-    }
   }
 
   static processSheetDataResponse = (sheetDataResponse, sheetName) => {
@@ -146,6 +139,7 @@ export default class ChannelHtmlGenerator {
         console.warn(`No sheet data available during HTML generation`);
       }
       const assets = [];
+      let errorFlag = false;
       for (let sheetIndex = 0; sheetIndex < sheetDetails.length; sheetIndex++) {
         try {
           const sheetDataResponse = JSON.parse(await FetchUtils.fetchDataFromUrl(sheetDetails[sheetIndex].link));
@@ -158,9 +152,7 @@ export default class ChannelHtmlGenerator {
           const sheetData = ChannelHtmlGenerator.processSheetDataResponse(sheetDataResponse, sheetName);
           for (let row = 0; row < sheetData.length; row++) {
             const assetDetails = sheetData[row];
-            const contentType = await ChannelHtmlGenerator.getContentType(assetDetails['Link']);
-            const type = ChannelHtmlGenerator.processContentType(contentType);
-            await ChannelHtmlGenerator.validateAssetLink(assetDetails['Link']);
+            const contentType = await ChannelHtmlGenerator.validateLinkAndGetContentType(assetDetails['Link']);
             DateUtils.validateTimeFormat(assetDetails['Start Time']);
             DateUtils.validateTimeFormat(assetDetails['End Time']);
             DateUtils.validateDateFormat(assetDetails['Launch Start']);
@@ -171,23 +163,29 @@ export default class ChannelHtmlGenerator {
               'endTime': assetDetails['End Time'],
               'launchStartDate': assetDetails['Launch Start'],
               'launchEndDate': assetDetails['Launch End'],
-              'type': type,
+              'type': contentType,
               'isGMT': DateUtils.isGMT(assetDetails['Timezone'])
             });
           }
         } catch (err) {
+          errorFlag = true;
           console.warn(`Error while processing sheet ${JSON.stringify(sheetDetails[sheetIndex])}`, err);
         }
       }
+      if (assets.length === 0 && errorFlag) {
+        // Don't create HTML with no assets when there was an error
+        return;
+      }
       const carouselHtml = ChannelHtmlGenerator.createCarousel(assets);
-      outputFile(`internal${channelPath}.html`, carouselHtml, (err) => {
+      const relativeChannelPath = channelPath.slice(1);
+      outputFile(`${relativeChannelPath}.html`, carouselHtml, (err) => {
         if (err) {
           console.error(err);
         }
       });
-      console.log(`HTML saved at internal${channelPath}.html`);
-      if (await GitUtils.isFileDirty(`internal${channelPath}.html`)) {
-        console.log(`Git: Existing html at internal${channelPath}.html is different from generated html.`);
+      console.log(`HTML saved at ${relativeChannelPath}.html`);
+      if (await GitUtils.isFileDirty(`${relativeChannelPath}.html`)) {
+        console.log(`Git: Existing html at ${relativeChannelPath}.html is different from generated html.`);
         return channelPath;
       }
     }));

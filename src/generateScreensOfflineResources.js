@@ -35,7 +35,7 @@ export default class GenerateScreensOfflineResources {
   static processLiveUrl = (liveUrl) => {
     try {
       const url = new URL(liveUrl);
-      url.pathname = `/internal${url.pathname}.html`;
+      url.pathname = `${url.pathname}.html`;
       return url.toString();
     } catch (err) {
       /* eslint-disable no-console */
@@ -93,11 +93,7 @@ export default class GenerateScreensOfflineResources {
       const [manifest, lastModified] = await ManifestGenerator
         .createManifest(host, data, generateLoopingHtml, updateHtml);
       const channelEntry = {};
-      if (generateLoopingHtml) {
-        channelEntry.manifestPath = `/internal${manifestData[i].path}.manifest.json`;
-      } else {
-        channelEntry.manifestPath = `${manifestData[i].path}.manifest.json`;
-      }
+      channelEntry.manifestPath = `${manifestData[i].path}.manifest.json`;
       channelEntry.lastModified = new Date(lastModified);
       if (channelsMap.get(manifestData[i].path)) {
         channelEntry.externalId = channelsMap.get(manifestData[i].path).externalId
@@ -113,11 +109,7 @@ export default class GenerateScreensOfflineResources {
       }
       channelJson.channels.push(channelEntry);
       let manifestFilePath = '';
-      if (generateLoopingHtml) {
-        manifestFilePath = `internal${manifestData[i].path}.manifest.json`;
-      } else {
-        manifestFilePath = `${manifestData[i].path.substring(1, manifestData[i].path.length)}.manifest.json`;
-      }
+      manifestFilePath = `${manifestData[i].path.substring(1, manifestData[i].path.length)}.manifest.json`;
       outputFile(manifestFilePath, JSON.stringify(manifest, null, 2), (err) => {
         if (err) {
           /* eslint-disable no-console */

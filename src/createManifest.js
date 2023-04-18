@@ -41,7 +41,7 @@ export default class ManifestGenerator {
    * Creating Page entry for manifest
    */
   static getPageJsonEntry = async (host, path, generateLoopingHtml, updateHtml) => {
-    const entryPath = generateLoopingHtml ? `/internal${path}.html` : path;
+    const entryPath = generateLoopingHtml ? `${path}.html` : path;
     const pagePath = FetchUtils.createUrlFromHostAndPath(host, entryPath);
     const resp = await fetch(pagePath, { method: 'HEAD' });
     const entry = {};
