@@ -92,22 +92,22 @@ export default class ChannelHtmlGenerator {
     return sheetDetails;
   }
 
-  static validateLinkAndGetContentType = (link) => {
+  static validateExtensionAndGetMediaType = (link) => {
     const supportedImageFormats = ['.png', '.jpg', '.jpeg', '.raw', '.tiff'];
     const supportedVideoFormats = ['.mp4', '.wmv', '.avi', '.mpg'];
-    let contentType;
+    let mediaType;
     supportedImageFormats.forEach((format) => {
-      if (link.endsWith(format)) {
-        contentType = 'image';
+      if (link.includes(format)) {
+        mediaType = 'image';
       }
     });
     supportedVideoFormats.forEach((format) => {
-      if (link.endsWith(format)) {
-        contentType = 'video';
+      if (link.includes(format)) {
+        mediaType = 'video';
       }
     });
-    if (contentType) {
-      return contentType;
+    if (mediaType) {
+      return mediaType;
     }
     throw new Error(`Incompatible asset format: ${link}`);
   }
@@ -154,7 +154,7 @@ export default class ChannelHtmlGenerator {
           for (let row = 0; row < sheetData.length; row++) {
             try {
               const assetDetails = sheetData[row];
-              const contentType = ChannelHtmlGenerator.validateLinkAndGetContentType(assetDetails['Link']);
+              const contentType = ChannelHtmlGenerator.validateExtensionAndGetMediaType(assetDetails['Link']);
               DateUtils.validateTimeFormat(assetDetails['Start Time']);
               DateUtils.validateTimeFormat(assetDetails['End Time']);
               DateUtils.validateDateFormat(assetDetails['Launch Start']);
