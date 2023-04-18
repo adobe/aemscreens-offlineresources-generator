@@ -92,22 +92,24 @@ export default class ChannelHtmlGenerator {
     return sheetDetails;
   }
 
-  static validateLinkAndGetContentType = async (link) => {
-    const response = await fetch(link, {method: 'HEAD'});
-    if (response.status !== 200) {
-      throw new Error(`Invalid asset link: ${link}, Received status: ${response.status}`);
+  static validateLinkAndGetContentType = (link) => {
+    const supportedImageFormats = ['.png', '.jpg', '.jpeg', '.raw', '.tiff'];
+    const supportedVideoFormats = ['.mp4', '.wmv', '.avi', '.mpg'];
+    let contentType;
+    supportedImageFormats.forEach((format) => {
+      if (link.endsWith(format)) {
+        contentType = 'image';
+      }
+    });
+    supportedVideoFormats.forEach((format) => {
+      if (link.endsWith(format)) {
+        contentType = 'video';
+      }
+    });
+    if (contentType) {
+      return contentType;
     }
-    let contentType = response.headers.get('content-type');
-    console.log(`Content type for link ${link}: ${contentType}`);
-    let type;
-    if (contentType && contentType.includes('video')) {
-      type = 'video';
-    } else if (contentType && contentType.includes('image')) {
-      type = 'image';
-    } else {
-      throw new Error(`Invalid asset content-type: ${contentType}`);
-    }
-    return type;
+    throw new Error(`Incompatible asset format: ${link}`);
   }
 
   static processSheetDataResponse = (sheetDataResponse, sheetName) => {
@@ -133,7 +135,6 @@ export default class ChannelHtmlGenerator {
       }
       const channelPath = channelData.path;
       const channelHtml = await FetchUtils.fetchDataFromUrl(url + channelPath);
-
       const sheetDetails = ChannelHtmlGenerator.extractSheetData(channelHtml) || [];
       if (sheetDetails.length === 0) {
         console.warn(`No sheet data available during HTML generation`);
@@ -151,21 +152,25 @@ export default class ChannelHtmlGenerator {
           const sheetName = sheetDetails[sheetIndex].name;
           const sheetData = ChannelHtmlGenerator.processSheetDataResponse(sheetDataResponse, sheetName);
           for (let row = 0; row < sheetData.length; row++) {
-            const assetDetails = sheetData[row];
-            const contentType = await ChannelHtmlGenerator.validateLinkAndGetContentType(assetDetails['Link']);
-            DateUtils.validateTimeFormat(assetDetails['Start Time']);
-            DateUtils.validateTimeFormat(assetDetails['End Time']);
-            DateUtils.validateDateFormat(assetDetails['Launch Start']);
-            DateUtils.validateDateFormat(assetDetails['Launch End']);
-            assets.push({
-              'link': assetDetails['Link'],
-              'startTime': assetDetails['Start Time'],
-              'endTime': assetDetails['End Time'],
-              'launchStartDate': assetDetails['Launch Start'],
-              'launchEndDate': assetDetails['Launch End'],
-              'type': contentType,
-              'isGMT': DateUtils.isGMT(assetDetails['Timezone'])
-            });
+            try {
+              const assetDetails = sheetData[row];
+              const contentType = ChannelHtmlGenerator.validateLinkAndGetContentType(assetDetails['Link']);
+              DateUtils.validateTimeFormat(assetDetails['Start Time']);
+              DateUtils.validateTimeFormat(assetDetails['End Time']);
+              DateUtils.validateDateFormat(assetDetails['Launch Start']);
+              DateUtils.validateDateFormat(assetDetails['Launch End']);
+              assets.push({
+                'link': assetDetails['Link'],
+                'startTime': assetDetails['Start Time'],
+                'endTime': assetDetails['End Time'],
+                'launchStartDate': assetDetails['Launch Start'],
+                'launchEndDate': assetDetails['Launch End'],
+                'type': contentType,
+                'isGMT': DateUtils.isGMT(assetDetails['Timezone'])
+              });
+            } catch (err) {
+              console.warn(`Error while processing asset ${JSON.stringify(sheetData[row])}`, err);
+            }
           }
         } catch (err) {
           errorFlag = true;
@@ -174,8 +179,10 @@ export default class ChannelHtmlGenerator {
       }
       if (assets.length === 0 && errorFlag) {
         // Don't create HTML with no assets when there was an error
+        console.log('Skipping HTML generation due to assets length zero along with error occurrence');
         return;
       }
+      console.log(`Assets extracted for channel ${channelPath}: ${JSON.stringify(assets)}`);
       const carouselHtml = ChannelHtmlGenerator.createCarousel(assets);
       const relativeChannelPath = channelPath.slice(1);
       outputFile(`${relativeChannelPath}.html`, carouselHtml, (err) => {
