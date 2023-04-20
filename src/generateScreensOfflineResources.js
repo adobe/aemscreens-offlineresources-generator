@@ -136,7 +136,7 @@ export default class GenerateScreensOfflineResources {
     }
     const gitUrl = await GitUtils.getOriginURL(process.cwd(), { });
     const gitBranch = await GitUtils.getBranch(process.cwd());
-    const host = `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
+    const host = parsedArgs.customDomain || `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
     const manifests = await FetchUtils.fetchData(host, helixManifest);
     const channelsList = await FetchUtils.fetchData(host, helixChannelsList);
     let updatedHtml = [];

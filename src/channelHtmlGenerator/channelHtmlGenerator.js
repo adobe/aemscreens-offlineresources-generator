@@ -122,7 +122,7 @@ export default class ChannelHtmlGenerator {
     }
   }
 
-  static generateChannelHTML = async (channels, url) => {
+  static generateChannelHTML = async (channels, host) => {
 
     if (!channels || !Array.isArray(channels.data)) {
       console.error(`HTML generation failed. Invalid channels: ${JSON.stringify(channels)}`);
@@ -134,7 +134,7 @@ export default class ChannelHtmlGenerator {
         return;
       }
       const channelPath = channelData.path;
-      const channelHtml = await FetchUtils.fetchDataFromUrl(url + channelPath);
+      const channelHtml = await FetchUtils.fetchDataFromUrl(host + channelPath);
       const sheetDetails = ChannelHtmlGenerator.extractSheetData(channelHtml) || [];
       if (sheetDetails.length === 0) {
         console.warn(`No sheet data available during HTML generation`);
@@ -143,7 +143,8 @@ export default class ChannelHtmlGenerator {
       let errorFlag = false;
       for (let sheetIndex = 0; sheetIndex < sheetDetails.length; sheetIndex++) {
         try {
-          const sheetDataResponse = JSON.parse(await FetchUtils.fetchDataFromUrl(sheetDetails[sheetIndex].link));
+          const sheetLinkUrl = new URL(sheetDetails[sheetIndex].link);
+          const sheetDataResponse = JSON.parse(await FetchUtils.fetchDataFromUrl(host + sheetLinkUrl.pathname));
           if (!sheetDataResponse) {
             console.warn(`Invalid sheet Link ${JSON.stringify(sheetDetails[sheetIndex])}.
                       Skipping processing this one.`);
