@@ -74,7 +74,8 @@ export default class GenerateScreensOfflineResources {
     jsonManifestData,
     channelsListData,
     generateLoopingHtml,
-    updatedHtml = []
+    updatedHtmls = [],
+    sequenceAssets = {},
   ) => {
     const manifests = JSON.parse(jsonManifestData);
     const channelsList = JSON.parse(channelsListData);
@@ -88,10 +89,10 @@ export default class GenerateScreensOfflineResources {
     channelJson.metadata.providerType = 'franklin';
     for (let i = 0; i < totalManifests; i++) {
       const data = manifestData[i];
-      const updateHtml = updatedHtml.includes(data.path);
+      const updateHtml = updatedHtmls.includes(data.path);
       /* eslint-disable no-await-in-loop */
       const [manifest, lastModified] = await ManifestGenerator
-        .createManifest(host, data, generateLoopingHtml, updateHtml);
+        .createManifest(host, data, generateLoopingHtml, updateHtml, sequenceAssets[data.path]);
       const channelEntry = {};
       channelEntry.manifestPath = `${manifestData[i].path}.manifest.json`;
       channelEntry.lastModified = new Date(lastModified);
@@ -137,13 +138,16 @@ export default class GenerateScreensOfflineResources {
     const gitUrl = await GitUtils.getOriginURL(process.cwd(), { });
     const gitBranch = await GitUtils.getBranch(process.cwd());
     const host = parsedArgs.customDomain || `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
-    const manifests = await FetchUtils.fetchData(host, helixManifest);
-    const channelsList = await FetchUtils.fetchData(host, helixChannelsList);
-    let updatedHtml = [];
-    if (parsedArgs.generateLoopingHtml === 'true') {
-      updatedHtml = await ChannelHtmlGenerator.generateChannelHTML(JSON.parse(manifests), host);
+    const manifests = await FetchUtils.fetchData(host, helixManifest,
+      { 'x-franklin-allowlist-key':process.env['franklinAllowlistKey'] });
+    const channelsList = await FetchUtils.fetchData(host, helixChannelsList,
+      { 'x-franklin-allowlist-key':process.env['franklinAllowlistKey'] });
+    let sequenceDetails = {};
+    if (generateLoopingHtml) {
+      sequenceDetails = await ChannelHtmlGenerator.generateChannelHTML(JSON.parse(manifests), host);
     }
     await GenerateScreensOfflineResources
-      .createOfflineResources(host, manifests, channelsList, generateLoopingHtml, updatedHtml);
+      .createOfflineResources(host, manifests, channelsList, generateLoopingHtml, sequenceDetails.updatedHtmls,
+        sequenceDetails.assetsLinks);
   };
 }

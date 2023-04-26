@@ -12,7 +12,7 @@
 
 import fetch from 'node-fetch';
 import Constants from './constants.js';
-import FetchUtils from "./utils/fetchUtils.js";
+import FetchUtils from './utils/fetchUtils.js';
 
 export default class ManifestGenerator {
   /**
@@ -43,7 +43,8 @@ export default class ManifestGenerator {
   static getPageJsonEntry = async (host, path, generateLoopingHtml, updateHtml) => {
     const entryPath = generateLoopingHtml ? `${path}.html` : path;
     const pagePath = FetchUtils.createUrlFromHostAndPath(host, entryPath);
-    const resp = await fetch(pagePath, { method: 'HEAD' });
+    const resp = await fetch(pagePath, { method: 'HEAD' ,
+      headers: { 'x-franklin-allowlist-key': process.env['franklinAllowlistKey'] }});
     const entry = {};
     entry.path = entryPath;
     // timestamp is optional value, only add if last-modified available
@@ -60,7 +61,10 @@ export default class ManifestGenerator {
    * Create the manifest entries
    */
   static createEntries = async (host, path, pageResources, generateLoopingHtml, updateHtml) => {
-    const resourcesArr = Array.from(pageResources);
+    let resourcesArr = [];
+    if (pageResources && pageResources.size > 0) {
+      resourcesArr = Array.from(pageResources);
+    }
     const entriesJson = [];
     let lastModified = 0;
     const pageEntryJson = await ManifestGenerator
@@ -73,7 +77,8 @@ export default class ManifestGenerator {
       const resourceSubPath = resourcesArr[i].trim();
       const resourcePath = FetchUtils.createUrlFromHostAndPath(host, resourceSubPath);
       /* eslint-disable no-await-in-loop */
-      const resp = await fetch(resourcePath, { method: 'HEAD' });
+      const resp = await fetch(resourcePath, { method: 'HEAD' ,
+        headers: {'x-franklin-allowlist-key':process.env['franklinAllowlistKey']}});
       if (!resp.ok) {
         /* eslint-disable no-console */
         console.log(`resource ${resourcePath} not available for channel ${path}`);
@@ -99,23 +104,29 @@ export default class ManifestGenerator {
     return [entriesJson, lastModified];
   };
 
-  static createManifest = async (host, data, generateLoopingHtml, updateHtml) => {
-    /* eslint-disable object-curly-newline */
-    const { path = '', scripts = '[]', styles = '[]', assets = '[]',
-      inlineImages = '[]', dependencies = '[]' } = data;
-    const scriptsList = JSON.parse(scripts);
-    const stylesList = JSON.parse(styles);
-    const assetsList = JSON.parse(assets);
-    assetsList.forEach(ManifestGenerator.trimImagesPath);
-    const inlineImagesList = JSON.parse(inlineImages);
-    inlineImagesList.forEach(ManifestGenerator.trimImagesPath);
-    const dependenciesList = JSON.parse(dependencies);
-
-    const pageResources = new Set([...scriptsList,
-      ...stylesList, ...assetsList,
-      ...inlineImagesList, ...dependenciesList]);
+  static createManifest = async (host, data, generateLoopingHtml, updateHtml, sequenceAssets = []) => {
+    let pageResources;
+    if (generateLoopingHtml === true) {
+      pageResources = new Set(sequenceAssets);
+    } else {
+      /* eslint-disable object-curly-newline */
+      const {
+        scripts = '[]', styles = '[]', assets = '[]',
+        inlineImages = '[]', dependencies = '[]'
+      } = data;
+      const scriptsList = JSON.parse(scripts);
+      const stylesList = JSON.parse(styles);
+      const assetsList = JSON.parse(assets);
+      assetsList.forEach(ManifestGenerator.trimImagesPath);
+      const inlineImagesList = JSON.parse(inlineImages);
+      inlineImagesList.forEach(ManifestGenerator.trimImagesPath);
+      const dependenciesList = JSON.parse(dependencies);
+      pageResources = new Set([...scriptsList,
+        ...stylesList, ...assetsList,
+        ...inlineImagesList, ...dependenciesList]);
+    }
     const [entries, lastModified] = await ManifestGenerator
-      .createEntries(host, path, pageResources, generateLoopingHtml, updateHtml);
+      .createEntries(host, data.path, pageResources, generateLoopingHtml, updateHtml);
     const currentTime = new Date().getTime();
     const manifestJson = {};
     manifestJson.version = '3.0';

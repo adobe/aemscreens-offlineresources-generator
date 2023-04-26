@@ -1,39 +1,36 @@
 import fs from 'fs';
-import fetch from 'node-fetch';
 import cheerio from 'cheerio';
 import { outputFile } from 'fs-extra';
-
-import {scriptText} from './carouselResources/carouselScript.js';
-import DateUtils from './../utils/dateUtils.js';
+import scriptText from './carouselResources/carouselScript.js';
+import DateUtils from '../utils/dateUtils.js';
 import FetchUtils from '../utils/fetchUtils.js';
-import GitUtils from "../utils/gitUtils.js";
+import GitUtils from '../utils/gitUtils.js';
 
 export default class ChannelHtmlGenerator {
-
   static createCSS = () => {
     let cssText = '';
     try {
-      const cssPath = process.cwd() + '/node_modules/@aem-screens/screens-offlineresources-generator/' +
-          'src/channelHtmlGenerator/carouselResources/carousel.css';
+      const cssPath = `${process.cwd()}/node_modules/@aem-screens/screens-offlineresources-generator/`
+        + 'src/channelHtmlGenerator/carouselResources/carousel.css';
       cssText = fs.readFileSync(cssPath, 'utf8');
     } catch (err) {
       console.error(err);
     }
     return cssText;
-  }
+  };
 
   static createScript = (assets) => {
     let scriptString = scriptText.toString();
     scriptString = scriptString.substring(scriptString.indexOf('{') + 1);
     scriptString = scriptString.slice(0, -1);
-    let assetsJson = JSON.stringify(assets);
-    scriptString = `const assets = JSON.parse('${assetsJson}');` + scriptString;
+    const assetsJson = JSON.stringify(assets);
+    scriptString = `const assets = JSON.parse('${assetsJson}');${scriptString}`;
     return scriptString;
-  }
+  };
 
   static createCarousel = (assets = []) => {
-    let scriptString = ChannelHtmlGenerator.createScript(assets);
-    let cssString = ChannelHtmlGenerator.createCSS();
+    const scriptString = ChannelHtmlGenerator.createScript(assets);
+    const cssString = ChannelHtmlGenerator.createCSS();
     return `<html lang="en-US">
              <head>
                <title></title>
@@ -44,7 +41,7 @@ export default class ChannelHtmlGenerator {
                <div id="carousel-container"></div>
              </body>
            </html>`;
-  }
+  };
 
   static extractSheetData = (channelHtml) => {
     // Parse the HTML response into a DOM element
@@ -61,10 +58,10 @@ export default class ChannelHtmlGenerator {
           sheetDetails.push({
             name: element.children[1].children[0].data,
             link: element.children[3].children[0].data
-          })
+          });
         }
       } catch (err) {
-        console.warn(`Invalid word doc row`, err);
+        console.warn('Invalid word doc row', err);
       }
     });
     if (sheetDetails.length === 0) {
@@ -80,21 +77,21 @@ export default class ChannelHtmlGenerator {
           const link = $(element).next().text();
           if (name && link) {
             sheetDetails.push({
-              name: name,
-              link: link
+              name,
+              link
             });
           }
         });
       } catch (err) {
-        console.warn(`Invalid word doc row`, err);
+        console.warn('Invalid word doc row', err);
       }
     }
     return sheetDetails;
-  }
+  };
 
   static validateExtensionAndGetMediaType = (link) => {
     const supportedImageFormats = ['.png', '.jpg', '.jpeg', '.raw', '.tiff'];
-    const supportedVideoFormats = ['.mp4', '.wmv', '.avi', '.mpg'];
+    const supportedVideoFormats = ['.mp4', '.wmv', '.avi', '.mpg', '.m4v'];
     let mediaType;
     supportedImageFormats.forEach((format) => {
       if (link.includes(format)) {
@@ -110,41 +107,52 @@ export default class ChannelHtmlGenerator {
       return mediaType;
     }
     throw new Error(`Incompatible asset format: ${link}`);
-  }
+  };
 
   static processSheetDataResponse = (sheetDataResponse, sheetName) => {
+    let data;
     if (sheetDataResponse[':type'] === 'multi-sheet') {
-      return sheetDataResponse[sheetName].data;
+      data = sheetDataResponse[sheetName].data;
     } else if (sheetDataResponse[':type'] === 'sheet') {
-      return sheetDataResponse.data;
+      data = sheetDataResponse.data;
     } else {
       throw new Error(`Invalid sheet type: ${sheetDataResponse[':type']}`);
     }
+    return data;
+  };
+
+  static getPathNameFromLink = (link) => {
+    const linkUrl = new URL(link);
+    return linkUrl.pathname;
   }
 
   static generateChannelHTML = async (channels, host) => {
-
     if (!channels || !Array.isArray(channels.data)) {
       console.error(`HTML generation failed. Invalid channels: ${JSON.stringify(channels)}`);
       return;
     }
-    return await Promise.all(channels.data.map(async (channelData) => {
+    let assetsLinks = {};
+    let updatedHtmls = [];
+    for (let index=0; index<channels.data.length; index++) {
+      const channelData = channels.data[index];
       if (!channelData) {
         console.warn(`Invalid channel data during html generation: ${channelData}`);
         return;
       }
       const channelPath = channelData.path;
-      const channelHtml = await FetchUtils.fetchDataFromUrl(host + channelPath);
+      const channelHtml = await FetchUtils.fetchDataFromUrl(host + channelPath,
+        { 'x-franklin-allowlist-key':process.env['franklinAllowlistKey'] });
       const sheetDetails = ChannelHtmlGenerator.extractSheetData(channelHtml) || [];
       if (sheetDetails.length === 0) {
-        console.warn(`No sheet data available during HTML generation`);
+        console.warn('No sheet data available during HTML generation');
       }
       const assets = [];
       let errorFlag = false;
       for (let sheetIndex = 0; sheetIndex < sheetDetails.length; sheetIndex++) {
         try {
           const sheetLinkUrl = new URL(sheetDetails[sheetIndex].link);
-          const sheetDataResponse = JSON.parse(await FetchUtils.fetchDataFromUrl(host + sheetLinkUrl.pathname));
+          const sheetDataResponse = JSON.parse(await FetchUtils.fetchDataFromUrl(host + sheetLinkUrl.pathname,
+            { 'x-franklin-allowlist-key':process.env['franklinAllowlistKey'] }));
           if (!sheetDataResponse) {
             console.warn(`Invalid sheet Link ${JSON.stringify(sheetDetails[sheetIndex])}.
                       Skipping processing this one.`);
@@ -155,19 +163,19 @@ export default class ChannelHtmlGenerator {
           for (let row = 0; row < sheetData.length; row++) {
             try {
               const assetDetails = sheetData[row];
-              const contentType = ChannelHtmlGenerator.validateExtensionAndGetMediaType(assetDetails['Link']);
+              const contentType = ChannelHtmlGenerator.validateExtensionAndGetMediaType(assetDetails.Link);
               DateUtils.validateTimeFormat(assetDetails['Start Time']);
               DateUtils.validateTimeFormat(assetDetails['End Time']);
               DateUtils.validateDateFormat(assetDetails['Launch Start']);
               DateUtils.validateDateFormat(assetDetails['Launch End']);
               assets.push({
-                'link': assetDetails['Link'],
-                'startTime': assetDetails['Start Time'],
-                'endTime': assetDetails['End Time'],
-                'launchStartDate': assetDetails['Launch Start'],
-                'launchEndDate': assetDetails['Launch End'],
-                'type': contentType,
-                'isGMT': DateUtils.isGMT(assetDetails['Timezone'])
+                link: ChannelHtmlGenerator.getPathNameFromLink(assetDetails.Link),
+                startTime: assetDetails['Start Time'],
+                endTime: assetDetails['End Time'],
+                launchStartDate: assetDetails['Launch Start'],
+                launchEndDate: assetDetails['Launch End'],
+                type: contentType,
+                isGMT: DateUtils.isGMT(assetDetails.Timezone)
               });
             } catch (err) {
               console.warn(`Error while processing asset ${JSON.stringify(sheetData[row])}`, err);
@@ -183,7 +191,7 @@ export default class ChannelHtmlGenerator {
         console.log('Skipping HTML generation due to assets length zero along with error occurrence');
         return;
       }
-      console.log(`Assets extracted for channel ${channelPath}: ${JSON.stringify(assets)}`);
+      //console.log(`Assets extracted for channel ${channelPath}: ${JSON.stringify(assets)}`);
       const carouselHtml = ChannelHtmlGenerator.createCarousel(assets);
       const relativeChannelPath = channelPath.slice(1);
       outputFile(`${relativeChannelPath}.html`, carouselHtml, (err) => {
@@ -194,8 +202,10 @@ export default class ChannelHtmlGenerator {
       console.log(`HTML saved at ${relativeChannelPath}.html`);
       if (await GitUtils.isFileDirty(`${relativeChannelPath}.html`)) {
         console.log(`Git: Existing html at ${relativeChannelPath}.html is different from generated html.`);
-        return channelPath;
+        updatedHtmls.push(channelPath);
       }
-    }));
-  }
+      assetsLinks[channelPath] = assets.map((asset) => asset.link);
+    }
+    return { updatedHtmls, assetsLinks };
+  };
 }
