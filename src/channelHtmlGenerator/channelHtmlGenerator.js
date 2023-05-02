@@ -124,24 +124,27 @@ export default class ChannelHtmlGenerator {
   static getPathNameFromLink = (link) => {
     const linkUrl = new URL(link);
     return linkUrl.pathname;
-  }
+  };
 
   static generateChannelHTML = async (channels, host) => {
     if (!channels || !Array.isArray(channels.data)) {
       console.error(`HTML generation failed. Invalid channels: ${JSON.stringify(channels)}`);
-      return;
+      return {};
     }
-    let assetsLinks = {};
-    let updatedHtmls = [];
-    for (let index=0; index<channels.data.length; index++) {
+    const assetsLinks = {};
+    const updatedHtmls = [];
+    for (let index = 0; index < channels.data.length; index++) {
       const channelData = channels.data[index];
       if (!channelData) {
         console.warn(`Invalid channel data during html generation: ${channelData}`);
-        return;
+        return {};
       }
       const channelPath = channelData.path;
-      const channelHtml = await FetchUtils.fetchDataFromUrl(host + channelPath,
-        { 'x-franklin-allowlist-key':process.env['franklinAllowlistKey'] });
+      /* eslint-disable no-await-in-loop */
+      const channelHtml = await FetchUtils.fetchDataFromUrl(
+        host + channelPath,
+        { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey }
+      );
       const sheetDetails = ChannelHtmlGenerator.extractSheetData(channelHtml) || [];
       if (sheetDetails.length === 0) {
         console.warn('No sheet data available during HTML generation');
@@ -151,12 +154,14 @@ export default class ChannelHtmlGenerator {
       for (let sheetIndex = 0; sheetIndex < sheetDetails.length; sheetIndex++) {
         try {
           const sheetLinkUrl = new URL(sheetDetails[sheetIndex].link);
-          const sheetDataResponse = JSON.parse(await FetchUtils.fetchDataFromUrl(host + sheetLinkUrl.pathname,
-            { 'x-franklin-allowlist-key':process.env['franklinAllowlistKey'] }));
+          const sheetDataResponse = JSON.parse(await FetchUtils.fetchDataFromUrl(
+            host + sheetLinkUrl.pathname,
+            { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey }
+          ));
           if (!sheetDataResponse) {
             console.warn(`Invalid sheet Link ${JSON.stringify(sheetDetails[sheetIndex])}.
                       Skipping processing this one.`);
-            return;
+            return {};
           }
           const sheetName = sheetDetails[sheetIndex].name;
           const sheetData = ChannelHtmlGenerator.processSheetDataResponse(sheetDataResponse, sheetName);
@@ -189,9 +194,8 @@ export default class ChannelHtmlGenerator {
       if (assets.length === 0 && errorFlag) {
         // Don't create HTML with no assets when there was an error
         console.log('Skipping HTML generation due to assets length zero along with error occurrence');
-        return;
+        return {};
       }
-      //console.log(`Assets extracted for channel ${channelPath}: ${JSON.stringify(assets)}`);
       const carouselHtml = ChannelHtmlGenerator.createCarousel(assets);
       const relativeChannelPath = channelPath.slice(1);
       outputFile(`${relativeChannelPath}.html`, carouselHtml, (err) => {
@@ -200,6 +204,7 @@ export default class ChannelHtmlGenerator {
         }
       });
       console.log(`HTML saved at ${relativeChannelPath}.html`);
+      /* eslint-disable no-await-in-loop */
       if (await GitUtils.isFileDirty(`${relativeChannelPath}.html`)) {
         console.log(`Git: Existing html at ${relativeChannelPath}.html is different from generated html.`);
         updatedHtmls.push(channelPath);

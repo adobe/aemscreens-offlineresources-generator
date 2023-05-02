@@ -7,7 +7,7 @@
     "license": "Apache-2.0",
     "scripts": {
         "lint:js": "eslint .",
-        "lint": "npm run lint:js && npm run lint:css"
+        "lint": "npm run lint:js"
     },
     "dependencies": {
         "@adobe/helix-shared-git": "3.0.0",

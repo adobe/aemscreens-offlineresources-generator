@@ -75,7 +75,7 @@ export default class GenerateScreensOfflineResources {
     channelsListData,
     generateLoopingHtml,
     updatedHtmls = [],
-    sequenceAssets = {},
+    sequenceAssets = {}
   ) => {
     const manifests = JSON.parse(jsonManifestData);
     const channelsList = JSON.parse(channelsListData);
@@ -138,16 +138,27 @@ export default class GenerateScreensOfflineResources {
     const gitUrl = await GitUtils.getOriginURL(process.cwd(), { });
     const gitBranch = await GitUtils.getBranch(process.cwd());
     const host = parsedArgs.customDomain || `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
-    const manifests = await FetchUtils.fetchData(host, helixManifest,
-      { 'x-franklin-allowlist-key':process.env['franklinAllowlistKey'] });
-    const channelsList = await FetchUtils.fetchData(host, helixChannelsList,
-      { 'x-franklin-allowlist-key':process.env['franklinAllowlistKey'] });
+    const manifests = await FetchUtils.fetchData(
+      host,
+      helixManifest,
+      { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey }
+    );
+    const channelsList = await FetchUtils.fetchData(
+      host,
+      helixChannelsList,
+      { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey }
+    );
     let sequenceDetails = {};
     if (generateLoopingHtml) {
       sequenceDetails = await ChannelHtmlGenerator.generateChannelHTML(JSON.parse(manifests), host);
     }
-    await GenerateScreensOfflineResources
-      .createOfflineResources(host, manifests, channelsList, generateLoopingHtml, sequenceDetails.updatedHtmls,
-        sequenceDetails.assetsLinks);
+    await GenerateScreensOfflineResources.createOfflineResources(
+      host,
+      manifests,
+      channelsList,
+      generateLoopingHtml,
+      sequenceDetails.updatedHtmls,
+      sequenceDetails.assetsLinks
+    );
   };
 }

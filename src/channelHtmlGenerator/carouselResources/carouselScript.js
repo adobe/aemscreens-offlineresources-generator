@@ -110,8 +110,10 @@ export default async function scriptText(assets) {
           const img = new Image();
           img.src = asset.link;
           img.onerror = () => {
-            incrementAdIndex();
-            playAds();
+            setTimeout(() => {
+              incrementAdIndex();
+              playAds();
+            }, 1000);
           };
           img.onload = () => {
             container.innerHTML = '';
@@ -123,7 +125,7 @@ export default async function scriptText(assets) {
                 container.removeChild(img);
                 incrementAdIndex();
                 playAds();
-              }, 5000);
+              }, 8000);
             }, 10);
           };
           break;
@@ -131,8 +133,10 @@ export default async function scriptText(assets) {
           const video = document.createElement('video');
           video.src = asset.link;
           video.onerror = () => {
-            incrementAdIndex();
-            playAds();
+            setTimeout(() => {
+              incrementAdIndex();
+              playAds();
+            }, 1000);
           };
           video.onended = () => {
             video.classList.remove('visible');

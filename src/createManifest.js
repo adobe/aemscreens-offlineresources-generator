@@ -43,8 +43,10 @@ export default class ManifestGenerator {
   static getPageJsonEntry = async (host, path, generateLoopingHtml, updateHtml) => {
     const entryPath = generateLoopingHtml ? `${path}.html` : path;
     const pagePath = FetchUtils.createUrlFromHostAndPath(host, entryPath);
-    const resp = await fetch(pagePath, { method: 'HEAD' ,
-      headers: { 'x-franklin-allowlist-key': process.env['franklinAllowlistKey'] }});
+    const resp = await fetch(
+      pagePath,
+      { method: 'HEAD', headers: { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey } }
+    );
     const entry = {};
     entry.path = entryPath;
     // timestamp is optional value, only add if last-modified available
@@ -77,8 +79,10 @@ export default class ManifestGenerator {
       const resourceSubPath = resourcesArr[i].trim();
       const resourcePath = FetchUtils.createUrlFromHostAndPath(host, resourceSubPath);
       /* eslint-disable no-await-in-loop */
-      const resp = await fetch(resourcePath, { method: 'HEAD' ,
-        headers: {'x-franklin-allowlist-key':process.env['franklinAllowlistKey']}});
+      const resp = await fetch(
+        resourcePath,
+        { method: 'HEAD', headers: { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey } }
+      );
       if (!resp.ok) {
         /* eslint-disable no-console */
         console.log(`resource ${resourcePath} not available for channel ${path}`);

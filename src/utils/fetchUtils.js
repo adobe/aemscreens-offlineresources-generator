@@ -15,8 +15,8 @@ export default class FetchUtils {
   static fetchDataFromUrl = async (url, additionalHeaders = {}) => {
     let result = '';
     try {
-      console.log({ headers: { ...additionalHeaders }});
-      result = fetch(url, { headers: { ...additionalHeaders }})
+      console.log({ headers: { ...additionalHeaders } });
+      result = fetch(url, { headers: { ...additionalHeaders } })
         .then((response) => {
           if (!response.ok) {
             throw new Error(`request to fetch ${url} failed with status code ${response.status}`);
