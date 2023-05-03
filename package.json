@@ -1,6 +1,6 @@
 {
     "name": "@aem-screens/screens-offlineresources-generator",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Screens module to generate offline resources for Screens channels created through Franklin",
     "main": "src/index.js",
     "type": "module",
@@ -13,7 +13,9 @@
         "@adobe/helix-shared-git": "3.0.0",
         "isomorphic-git": "1.21.0",
         "fs-extra": "11.1.0",
-        "node-fetch": "^3.3.0"
+        "node-fetch": "^3.3.0",
+        "cheerio": "^1.0.0-rc.12",
+        "fetch": "^1.1.0"
     },
     "devDependencies": {
         "@babel/core": "7.20.12",

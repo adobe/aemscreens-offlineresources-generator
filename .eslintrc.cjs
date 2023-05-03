@@ -19,6 +19,7 @@ module.exports = {
     }],
     'no-plusplus': ["error", { "allowForLoopAfterthoughts": true }],
     'max-len': ["error", { "code": 120 }],
-    'comma-dangle': ["error", {"functions": "never"}]
+    'comma-dangle': ["error", {"functions": "never"}],
+    'no-console': 'off'
   },
 };
