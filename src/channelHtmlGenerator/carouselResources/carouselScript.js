@@ -1,5 +1,6 @@
 export default async function scriptText(assets) {
   let currentIndex = 0;
+
   const parseDateString = (dateString, isGMT) => {
     const dateParts = dateString.split('/');
     const day = parseInt(dateParts[0], 10);
@@ -85,7 +86,7 @@ export default async function scriptText(assets) {
       }
     });
     if (!isActive) {
-      await new Promise((r) => { setTimeout(r, 5000); });
+      await new Promise((r) => setTimeout(r, 5000));
       await checkForPlayableAssets(assetsArray);
     }
   };
@@ -113,7 +114,7 @@ export default async function scriptText(assets) {
             setTimeout(() => {
               incrementAdIndex();
               playAds();
-            }, 1000);
+            }, 100);
           };
           img.onload = () => {
             container.innerHTML = '';
@@ -136,7 +137,7 @@ export default async function scriptText(assets) {
             setTimeout(() => {
               incrementAdIndex();
               playAds();
-            }, 1000);
+            }, 100);
           };
           video.onended = () => {
             video.classList.remove('visible');

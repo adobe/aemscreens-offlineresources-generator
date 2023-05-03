@@ -49,26 +49,13 @@ export default class ChannelHtmlGenerator {
     const container = $('.locations');
     const sheetDetails = [];
     if (!container || !container.children()) {
+      console.warn('No carousel data found while extracting sheet data.');
       return sheetDetails;
     }
-    // fetch from google doc format
-    Array.from(container.children()).forEach((element) => {
-      try {
-        if (element.children[1].children[0].data && element.children[3].children[0].data) {
-          sheetDetails.push({
-            name: element.children[1].children[0].data,
-            link: element.children[3].children[0].data
-          });
-        }
-      } catch (err) {
-        console.warn('Invalid word doc row', err);
-      }
-    });
-    if (sheetDetails.length === 0) {
-      // fetch from sharepoint format now
-      let skipParentProcessing = true;
-      try {
-        container.find('div:first-child').each((index, element) => {
+    let skipParentProcessing = true;
+    try {
+      container.find('div:first-child').each((index, element) => {
+        try {
           if (skipParentProcessing) {
             skipParentProcessing = false;
             return;
@@ -81,10 +68,12 @@ export default class ChannelHtmlGenerator {
               link
             });
           }
-        });
-      } catch (err) {
-        console.warn('Invalid word doc row', err);
-      }
+        } catch (err) {
+          console.warn(`Exception while processing row ${index}`, err);
+        }
+      });
+    } catch (err) {
+      console.warn('Exception while extracting sheet data', err);
     }
     return sheetDetails;
   };
