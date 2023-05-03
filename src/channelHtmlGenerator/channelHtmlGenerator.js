@@ -150,7 +150,7 @@ export default class ChannelHtmlGenerator {
           if (!sheetDataResponse) {
             console.warn(`Invalid sheet Link ${JSON.stringify(sheetDetails[sheetIndex])}.
                       Skipping processing this one.`);
-            return {};
+            continue;
           }
           const sheetName = sheetDetails[sheetIndex].name;
           const sheetData = ChannelHtmlGenerator.processSheetDataResponse(sheetDataResponse, sheetName);
@@ -183,7 +183,7 @@ export default class ChannelHtmlGenerator {
       if (assets.length === 0 && errorFlag) {
         // Don't create HTML with no assets when there was an error
         console.log('Skipping HTML generation due to assets length zero along with error occurrence');
-        return {};
+        continue;
       }
       const carouselHtml = ChannelHtmlGenerator.createCarousel(assets);
       const relativeChannelPath = channelPath.slice(1);
