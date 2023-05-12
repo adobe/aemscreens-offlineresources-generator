@@ -115,13 +115,14 @@ export default class ChannelHtmlGenerator {
     return linkUrl.pathname;
   };
 
-  static generateChannelHTML = async (channels, host) => {
+  static generateChannelHTML = async (channels, host, generateLoopingHtml = false) => {
     if (!channels || !Array.isArray(channels.data)) {
       console.error(`HTML generation failed. Invalid channels: ${JSON.stringify(channels)}`);
       return {};
     }
     const assetsLinks = {};
     const updatedHtmls = [];
+    const includeCarousel = [];
     for (let index = 0; index < channels.data.length; index++) {
       const channelData = channels.data[index];
       if (!channelData) {
@@ -131,63 +132,69 @@ export default class ChannelHtmlGenerator {
       const channelPath = channelData.path;
       /* eslint-disable no-await-in-loop */
       const channelHtml = await FetchUtils.fetchDataFromUrl(
-        host + channelPath,
-        { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey }
+          host + channelPath,
+          {'x-franklin-allowlist-key': process.env.franklinAllowlistKey}
       );
-      const sheetDetails = ChannelHtmlGenerator.extractSheetData(channelHtml) || [];
-      if (sheetDetails.length === 0) {
-        console.warn('No sheet data available during HTML generation');
-      }
-      const assets = [];
-      let errorFlag = false;
-      for (let sheetIndex = 0; sheetIndex < sheetDetails.length; sheetIndex++) {
-        try {
-          const sheetLinkUrl = new URL(sheetDetails[sheetIndex].link);
-          const sheetDataResponse = JSON.parse(await FetchUtils.fetchDataFromUrl(
-            host + sheetLinkUrl.pathname,
-            { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey }
-          ));
-          if (!sheetDataResponse) {
-            console.warn(`Invalid sheet Link ${JSON.stringify(sheetDetails[sheetIndex])}.
-                      Skipping processing this one.`);
-            continue;
-          }
-          const sheetName = sheetDetails[sheetIndex].name;
-          const sheetData = ChannelHtmlGenerator.processSheetDataResponse(sheetDataResponse, sheetName);
-          for (let row = 0; row < sheetData.length; row++) {
+      let generatedHtml = channelHtml;
+      if (generateLoopingHtml) {
+        const sheetDetails = ChannelHtmlGenerator.extractSheetData(channelHtml) || [];
+        if (sheetDetails.length === 0) {
+          console.warn('No sheet data available during HTML generation');
+        } else {
+          includeCarousel.push(channelPath);
+          const assets = [];
+          let errorFlag = false;
+          for (let sheetIndex = 0; sheetIndex < sheetDetails.length; sheetIndex++) {
             try {
-              const assetDetails = sheetData[row];
-              const contentType = ChannelHtmlGenerator.validateExtensionAndGetMediaType(assetDetails.Link);
-              DateUtils.validateTimeFormat(assetDetails['Start Time']);
-              DateUtils.validateTimeFormat(assetDetails['End Time']);
-              DateUtils.validateDateFormat(assetDetails['Launch Start']);
-              DateUtils.validateDateFormat(assetDetails['Launch End']);
-              assets.push({
-                link: ChannelHtmlGenerator.getPathNameFromLink(assetDetails.Link),
-                startTime: assetDetails['Start Time'],
-                endTime: assetDetails['End Time'],
-                launchStartDate: assetDetails['Launch Start'],
-                launchEndDate: assetDetails['Launch End'],
-                type: contentType,
-                isGMT: DateUtils.isGMT(assetDetails.Timezone)
-              });
+              const sheetLinkUrl = new URL(sheetDetails[sheetIndex].link);
+              const sheetDataResponse = JSON.parse(await FetchUtils.fetchDataFromUrl(
+                  host + sheetLinkUrl.pathname,
+                  {'x-franklin-allowlist-key': process.env.franklinAllowlistKey}
+              ));
+              if (!sheetDataResponse) {
+                console.warn(`Invalid sheet Link ${JSON.stringify(sheetDetails[sheetIndex])}.
+                      Skipping processing this one.`);
+                continue;
+              }
+              const sheetName = sheetDetails[sheetIndex].name;
+              const sheetData = ChannelHtmlGenerator.processSheetDataResponse(sheetDataResponse, sheetName);
+              for (let row = 0; row < sheetData.length; row++) {
+                try {
+                  const assetDetails = sheetData[row];
+                  const contentType = ChannelHtmlGenerator.validateExtensionAndGetMediaType(assetDetails.Link);
+                  DateUtils.validateTimeFormat(assetDetails['Start Time']);
+                  DateUtils.validateTimeFormat(assetDetails['End Time']);
+                  DateUtils.validateDateFormat(assetDetails['Launch Start']);
+                  DateUtils.validateDateFormat(assetDetails['Launch End']);
+                  assets.push({
+                    link: ChannelHtmlGenerator.getPathNameFromLink(assetDetails.Link),
+                    startTime: assetDetails['Start Time'],
+                    endTime: assetDetails['End Time'],
+                    launchStartDate: assetDetails['Launch Start'],
+                    launchEndDate: assetDetails['Launch End'],
+                    type: contentType,
+                    isGMT: DateUtils.isGMT(assetDetails.Timezone)
+                  });
+                } catch (err) {
+                  console.warn(`Error while processing asset ${JSON.stringify(sheetData[row])}`, err);
+                }
+              }
             } catch (err) {
-              console.warn(`Error while processing asset ${JSON.stringify(sheetData[row])}`, err);
+              errorFlag = true;
+              console.warn(`Error while processing sheet ${JSON.stringify(sheetDetails[sheetIndex])}`, err);
             }
           }
-        } catch (err) {
-          errorFlag = true;
-          console.warn(`Error while processing sheet ${JSON.stringify(sheetDetails[sheetIndex])}`, err);
+          if (assets.length === 0 && errorFlag) {
+            // Don't create HTML with no assets when there was an error
+            console.log('Skipping HTML generation due to assets length zero along with error occurrence');
+            continue;
+          }
+          generatedHtml = ChannelHtmlGenerator.createCarousel(assets);
+          assetsLinks[channelPath] = assets.map((asset) => asset.link);
         }
       }
-      if (assets.length === 0 && errorFlag) {
-        // Don't create HTML with no assets when there was an error
-        console.log('Skipping HTML generation due to assets length zero along with error occurrence');
-        continue;
-      }
-      const carouselHtml = ChannelHtmlGenerator.createCarousel(assets);
       const relativeChannelPath = channelPath.slice(1);
-      outputFile(`${relativeChannelPath}.html`, carouselHtml, (err) => {
+      outputFile(`${relativeChannelPath}.html`, generatedHtml, (err) => {
         if (err) {
           console.error(err);
         }
@@ -198,8 +205,7 @@ export default class ChannelHtmlGenerator {
         console.log(`Git: Existing html at ${relativeChannelPath}.html is different from generated html.`);
         updatedHtmls.push(channelPath);
       }
-      assetsLinks[channelPath] = assets.map((asset) => asset.link);
     }
-    return { updatedHtmls, assetsLinks };
+    return { updatedHtmls, assetsLinks, includeCarousel };
   };
 }

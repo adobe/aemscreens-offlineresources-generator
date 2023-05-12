@@ -40,8 +40,8 @@ export default class ManifestGenerator {
   /**
    * Creating Page entry for manifest
    */
-  static getPageJsonEntry = async (host, path, generateLoopingHtml, updateHtml) => {
-    const entryPath = generateLoopingHtml ? `${path}.html` : path;
+  static getPageJsonEntry = async (host, path, updateHtml) => {
+    const entryPath = `${path}.html`;
     const pagePath = FetchUtils.createUrlFromHostAndPath(host, entryPath);
     const resp = await fetch(
       pagePath,
@@ -62,7 +62,7 @@ export default class ManifestGenerator {
   /**
    * Create the manifest entries
    */
-  static createEntries = async (host, path, pageResources, generateLoopingHtml, updateHtml) => {
+  static createEntries = async (host, path, pageResources, updateHtml) => {
     let resourcesArr = [];
     if (pageResources && pageResources.size > 0) {
       resourcesArr = Array.from(pageResources);
@@ -70,7 +70,7 @@ export default class ManifestGenerator {
     const entriesJson = [];
     let lastModified = 0;
     const pageEntryJson = await ManifestGenerator
-      .getPageJsonEntry(host, path, generateLoopingHtml, updateHtml);
+      .getPageJsonEntry(host, path, updateHtml);
     if (pageEntryJson.timestamp && pageEntryJson.timestamp > lastModified) {
       lastModified = pageEntryJson.timestamp;
     }
@@ -130,7 +130,7 @@ export default class ManifestGenerator {
         ...inlineImagesList, ...dependenciesList]);
     }
     const [entries, lastModified] = await ManifestGenerator
-      .createEntries(host, data.path, pageResources, generateLoopingHtml, updateHtml);
+      .createEntries(host, data.path, pageResources, updateHtml);
     const currentTime = new Date().getTime();
     const manifestJson = {};
     manifestJson.version = '3.0';

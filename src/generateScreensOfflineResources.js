@@ -15,6 +15,7 @@ import GitUtils from './utils/gitUtils.js';
 import ManifestGenerator from './createManifest.js';
 import FetchUtils from './utils/fetchUtils.js';
 import ChannelHtmlGenerator from './channelHtmlGenerator/channelHtmlGenerator.js';
+import {hasClass} from "cheerio/lib/api/attributes.js";
 
 export default class GenerateScreensOfflineResources {
   /**
@@ -47,18 +48,15 @@ export default class GenerateScreensOfflineResources {
   /**
    * Create ChannelMap from the helix channels list
    */
-  static createChannelMap = (channelsData, generateLoopingHtml) => {
+  static createChannelMap = (channelsData) => {
     const channelsMap = new Map();
     for (let i = 0; i < channelsData.length; i++) {
       const channelPath = channelsData[i].path;
       const channelData = {};
       channelData.externalId = channelsData[i].externalId;
-      if (generateLoopingHtml) {
-        channelData.liveUrl = GenerateScreensOfflineResources
-          .processLiveUrl(channelsData[i].liveUrl);
-      } else {
-        channelData.liveUrl = channelsData[i].liveUrl;
-      }
+      channelData.liveUrl = GenerateScreensOfflineResources
+        .processLiveUrl(channelsData[i].liveUrl);
+
       channelData.editUrl = channelsData[i].editUrl;
       channelData.title = channelsData[i].title;
       channelsMap.set(channelPath, channelData);
@@ -75,14 +73,15 @@ export default class GenerateScreensOfflineResources {
     channelsListData,
     generateLoopingHtml,
     updatedHtmls = [],
-    sequenceAssets = {}
+    sequenceAssets = {},
+    includeCarousel = []
   ) => {
     const manifests = JSON.parse(jsonManifestData);
     const channelsList = JSON.parse(channelsListData);
     const totalManifests = parseInt(manifests.total, 10);
     const manifestData = manifests.data;
     const channelsData = channelsList.data;
-    const channelsMap = GenerateScreensOfflineResources.createChannelMap(channelsData, generateLoopingHtml);
+    const channelsMap = GenerateScreensOfflineResources.createChannelMap(channelsData);
     const channelJson = {};
     channelJson.channels = [];
     channelJson.metadata = {};
@@ -90,9 +89,10 @@ export default class GenerateScreensOfflineResources {
     for (let i = 0; i < totalManifests; i++) {
       const data = manifestData[i];
       const updateHtml = updatedHtmls.includes(data.path);
+      const hasCarousel = includeCarousel.includes(data.path);
       /* eslint-disable no-await-in-loop */
       const [manifest, lastModified] = await ManifestGenerator
-        .createManifest(host, data, generateLoopingHtml, updateHtml, sequenceAssets[data.path]);
+        .createManifest(host, data, generateLoopingHtml && hasCarousel, updateHtml, sequenceAssets[data.path]);
       const channelEntry = {};
       channelEntry.manifestPath = `${manifestData[i].path}.manifest.json`;
       channelEntry.lastModified = new Date(lastModified);
@@ -149,16 +149,16 @@ export default class GenerateScreensOfflineResources {
       { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey }
     );
     let sequenceDetails = {};
-    if (generateLoopingHtml) {
-      sequenceDetails = await ChannelHtmlGenerator.generateChannelHTML(JSON.parse(manifests), host);
-    }
+    sequenceDetails = await ChannelHtmlGenerator.generateChannelHTML(JSON.parse(manifests), host, generateLoopingHtml);
+
     await GenerateScreensOfflineResources.createOfflineResources(
       host,
       manifests,
       channelsList,
       generateLoopingHtml,
       sequenceDetails.updatedHtmls,
-      sequenceDetails.assetsLinks
+      sequenceDetails.assetsLinks,
+      sequenceDetails.includeCarousel
     );
   };
 }
