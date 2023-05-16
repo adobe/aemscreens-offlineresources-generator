@@ -132,8 +132,8 @@ export default class ChannelHtmlGenerator {
       const channelPath = channelData.path;
       /* eslint-disable no-await-in-loop */
       const channelHtml = await FetchUtils.fetchDataFromUrl(
-          host + channelPath,
-          {'x-franklin-allowlist-key': process.env.franklinAllowlistKey}
+        host + channelPath,
+        { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey }
       );
       let generatedHtml = channelHtml;
       if (generateLoopingHtml) {
@@ -148,8 +148,8 @@ export default class ChannelHtmlGenerator {
             try {
               const sheetLinkUrl = new URL(sheetDetails[sheetIndex].link);
               const sheetDataResponse = JSON.parse(await FetchUtils.fetchDataFromUrl(
-                  host + sheetLinkUrl.pathname,
-                  {'x-franklin-allowlist-key': process.env.franklinAllowlistKey}
+                host + sheetLinkUrl.pathname,
+                { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey }
               ));
               if (!sheetDataResponse) {
                 console.warn(`Invalid sheet Link ${JSON.stringify(sheetDetails[sheetIndex])}.

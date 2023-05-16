@@ -15,7 +15,6 @@ import GitUtils from './utils/gitUtils.js';
 import ManifestGenerator from './createManifest.js';
 import FetchUtils from './utils/fetchUtils.js';
 import ChannelHtmlGenerator from './channelHtmlGenerator/channelHtmlGenerator.js';
-import {hasClass} from "cheerio/lib/api/attributes.js";
 
 export default class GenerateScreensOfflineResources {
   /**

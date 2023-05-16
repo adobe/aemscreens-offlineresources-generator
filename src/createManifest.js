@@ -13,6 +13,7 @@
 import fetch from 'node-fetch';
 import Constants from './constants.js';
 import FetchUtils from './utils/fetchUtils.js';
+import PathUtils from './utils/pathUtils.js';
 
 export default class ManifestGenerator {
   /**
@@ -69,6 +70,7 @@ export default class ManifestGenerator {
     }
     const entriesJson = [];
     let lastModified = 0;
+    const parentPath = PathUtils.getParentFromPath(path);
     const pageEntryJson = await ManifestGenerator
       .getPageJsonEntry(host, path, updateHtml);
     if (pageEntryJson.timestamp && pageEntryJson.timestamp > lastModified) {
@@ -100,6 +102,7 @@ export default class ManifestGenerator {
         }
         resourceEntry.timestamp = timestamp;
       } else if (ManifestGenerator.isMedia(resourceSubPath)) {
+        resourceEntry.path = parentPath.concat(resourceEntry.path);
         resourceEntry.hash = ManifestGenerator.getHashFromMedia(resourceSubPath);
       }
       entriesJson.push(resourceEntry);
