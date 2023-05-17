@@ -12,12 +12,20 @@
 
 export default class PathUtils {
   static getParentFromPath = (path) => path.substring(0, path.lastIndexOf('/'));
+
   static getCurrentPathName = (path) => path.substring(path.lastIndexOf('/') + 1);
 
   static getParentHierarchy = (path) => {
     const hierarchy = [];
-    const reverseHierarchy = [];
-    var currentParent = PathUtils.getParentFromPath(path);
-  }
-
+    let currentParent = PathUtils.getParentFromPath(path);
+    while (currentParent !== '') {
+      const entry = {};
+      entry.title = PathUtils.getCurrentPathName(currentParent);
+      entry.path = currentParent;
+      hierarchy.push(entry);
+      currentParent = PathUtils.getParentFromPath(currentParent);
+    }
+    hierarchy.reverse();
+    return hierarchy;
+  };
 }

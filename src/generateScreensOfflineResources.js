@@ -15,6 +15,7 @@ import GitUtils from './utils/gitUtils.js';
 import ManifestGenerator from './createManifest.js';
 import FetchUtils from './utils/fetchUtils.js';
 import ChannelHtmlGenerator from './channelHtmlGenerator/channelHtmlGenerator.js';
+import PathUtils from './utils/pathUtils.js';
 
 export default class GenerateScreensOfflineResources {
   /**
@@ -95,6 +96,8 @@ export default class GenerateScreensOfflineResources {
       const channelEntry = {};
       channelEntry.manifestPath = `${manifestData[i].path}.manifest.json`;
       channelEntry.lastModified = new Date(lastModified);
+      const hierarchy = PathUtils.getParentHierarchy(manifestData[i].path);
+      channelEntry.hierarchy = hierarchy;
       if (channelsMap.get(manifestData[i].path)) {
         channelEntry.externalId = channelsMap.get(manifestData[i].path).externalId
           ? channelsMap.get(manifestData[i].path).externalId : '';
