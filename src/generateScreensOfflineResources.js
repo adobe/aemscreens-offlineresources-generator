@@ -14,9 +14,20 @@ import { outputFile } from 'fs-extra';
 import GitUtils from './utils/gitUtils.js';
 import ManifestGenerator from './createManifest.js';
 import FetchUtils from './utils/fetchUtils.js';
-import ChannelHtmlGenerator from './channelHtmlGenerator/channelHtmlGenerator.js';
+
+const logIfError = (err) => {
+  if (err) {
+    console.error(err);
+  }
+};
 
 export default class GenerateScreensOfflineResources {
+  static getHost = async () => {
+    const gitUrl = await GitUtils.getOriginURL(process.cwd(), {});
+    const gitBranch = await GitUtils.getBranch(process.cwd());
+    return `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
+  };
+
   /**
    * Parse command line arguments
    */
@@ -47,18 +58,14 @@ export default class GenerateScreensOfflineResources {
   /**
    * Create ChannelMap from the helix channels list
    */
-  static createChannelMap = (channelsData, generateLoopingHtml) => {
+  static createChannelMap = (channelsData) => {
     const channelsMap = new Map();
     for (let i = 0; i < channelsData.length; i++) {
       const channelPath = channelsData[i].path;
       const channelData = {};
       channelData.externalId = channelsData[i].externalId;
-      if (generateLoopingHtml) {
-        channelData.liveUrl = GenerateScreensOfflineResources
-          .processLiveUrl(channelsData[i].liveUrl);
-      } else {
-        channelData.liveUrl = channelsData[i].liveUrl;
-      }
+      channelData.liveUrl = GenerateScreensOfflineResources.processLiveUrl(channelsData[i].liveUrl);
+
       channelData.editUrl = channelsData[i].editUrl;
       channelData.title = channelsData[i].title;
       channelsMap.set(channelPath, channelData);
@@ -72,30 +79,38 @@ export default class GenerateScreensOfflineResources {
   static createOfflineResources = async (
     host,
     jsonManifestData,
-    channelsListData,
-    generateLoopingHtml,
-    updatedHtmls = [],
-    sequenceAssets = {}
+    channelsListData
   ) => {
     const manifests = JSON.parse(jsonManifestData);
     const channelsList = JSON.parse(channelsListData);
     const totalManifests = parseInt(manifests.total, 10);
     const manifestData = manifests.data;
     const channelsData = channelsList.data;
-    const channelsMap = GenerateScreensOfflineResources.createChannelMap(channelsData, generateLoopingHtml);
-    const channelJson = {};
-    channelJson.channels = [];
-    channelJson.metadata = {};
-    channelJson.metadata.providerType = 'franklin';
+    const channelsMap = GenerateScreensOfflineResources.createChannelMap(channelsData);
+    const channelJson = {
+      channels: [],
+      metadata: {
+        providerType: 'franklin'
+      }
+    };
+
     for (let i = 0; i < totalManifests; i++) {
       const data = manifestData[i];
-      const updateHtml = updatedHtmls.includes(data.path);
+      const relativeChannelPath = data.path.slice(1);
+      let isHtmlUpdated = false;
       /* eslint-disable no-await-in-loop */
-      const [manifest, lastModified] = await ManifestGenerator
-        .createManifest(host, data, generateLoopingHtml, updateHtml, sequenceAssets[data.path]);
-      const channelEntry = {};
-      channelEntry.manifestPath = `${manifestData[i].path}.manifest.json`;
-      channelEntry.lastModified = new Date(lastModified);
+      if (await GitUtils.isFileDirty(`${relativeChannelPath}.html`)) {
+        console.log(`Git: Existing html at ${relativeChannelPath}.html is different from generated html.`);
+        isHtmlUpdated = true;
+      }
+
+      /* eslint-disable no-await-in-loop */
+      const [manifest, lastModified] = await ManifestGenerator.createManifest(host, data, isHtmlUpdated);
+      const channelEntry = {
+        manifestPath: `${manifestData[i].path}.manifest.json`,
+        lastModified: new Date(lastModified)
+      };
+
       if (channelsMap.get(manifestData[i].path)) {
         channelEntry.externalId = channelsMap.get(manifestData[i].path).externalId
           ? channelsMap.get(manifestData[i].path).externalId : '';
@@ -111,19 +126,9 @@ export default class GenerateScreensOfflineResources {
       channelJson.channels.push(channelEntry);
       let manifestFilePath = '';
       manifestFilePath = `${manifestData[i].path.substring(1, manifestData[i].path.length)}.manifest.json`;
-      outputFile(manifestFilePath, JSON.stringify(manifest, null, 2), (err) => {
-        if (err) {
-          /* eslint-disable no-console */
-          console.log(err);
-        }
-      });
+      outputFile(manifestFilePath, JSON.stringify(manifest, null, 2), logIfError);
     }
-    outputFile('screens/channels.json', JSON.stringify(channelJson, null, 2), (err) => {
-      if (err) {
-        /* eslint-disable no-console */
-        console.log(err);
-      }
-    });
+    outputFile('screens/channels.json', JSON.stringify(channelJson, null, 2), logIfError);
   };
 
   static run = async (args) => {
@@ -131,34 +136,15 @@ export default class GenerateScreensOfflineResources {
     const helixManifest = parsedArgs.helixManifest ? `${parsedArgs.helixManifest}.json` : '/manifest.json';
     const helixChannelsList = parsedArgs.helixChannelsList
       ? `${parsedArgs.helixChannelsList}.json` : '/channels.json';
-    let generateLoopingHtml = false;
-    if (parsedArgs.generateLoopingHtml === 'true') {
-      generateLoopingHtml = true;
-    }
-    const gitUrl = await GitUtils.getOriginURL(process.cwd(), { });
-    const gitBranch = await GitUtils.getBranch(process.cwd());
-    const host = parsedArgs.customDomain || `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
-    const manifests = await FetchUtils.fetchData(
-      host,
-      helixManifest,
-      { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey }
-    );
-    const channelsList = await FetchUtils.fetchData(
-      host,
-      helixChannelsList,
-      { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey }
-    );
-    let sequenceDetails = {};
-    if (generateLoopingHtml) {
-      sequenceDetails = await ChannelHtmlGenerator.generateChannelHTML(JSON.parse(manifests), host);
-    }
+
+    const host = parsedArgs.customDomain || await GenerateScreensOfflineResources.getHost();
+    const manifests = await FetchUtils.fetchData(host, helixManifest);
+    const channelsList = await FetchUtils.fetchData(host, helixChannelsList);
+
     await GenerateScreensOfflineResources.createOfflineResources(
       host,
       manifests,
-      channelsList,
-      generateLoopingHtml,
-      sequenceDetails.updatedHtmls,
-      sequenceDetails.assetsLinks
+      channelsList
     );
   };
 }

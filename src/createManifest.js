@@ -13,6 +13,7 @@
 import fetch from 'node-fetch';
 import Constants from './constants.js';
 import FetchUtils from './utils/fetchUtils.js';
+import PathUtils from './utils/pathUtils.js';
 
 export default class ManifestGenerator {
   /**
@@ -40,17 +41,12 @@ export default class ManifestGenerator {
   /**
    * Creating Page entry for manifest
    */
-  static getPageJsonEntry = async (host, path, generateLoopingHtml, updateHtml) => {
-    const entryPath = generateLoopingHtml ? `${path}.html` : path;
-    const pagePath = FetchUtils.createUrlFromHostAndPath(host, entryPath);
-    const resp = await fetch(
-      pagePath,
-      { method: 'HEAD', headers: { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey } }
-    );
-    const entry = {};
-    entry.path = entryPath;
+  static getPageJsonEntry = async (host, path, isHtmlUpdated) => {
+    const entryPath = `${path}.html`;
+    const resp = await FetchUtils.fetchData(host, entryPath);
+    const entry = { path: entryPath };
     // timestamp is optional value, only add if last-modified available
-    if (updateHtml) {
+    if (isHtmlUpdated) {
       entry.timestamp = new Date().getTime();
     } else if (resp.ok && resp.headers.get('last-modified')) {
       const date = resp.headers.get('last-modified');
@@ -62,15 +58,15 @@ export default class ManifestGenerator {
   /**
    * Create the manifest entries
    */
-  static createEntries = async (host, path, pageResources, generateLoopingHtml, updateHtml) => {
+  static createEntries = async (host, path, pageResources, isHtmlUpdated) => {
     let resourcesArr = [];
     if (pageResources && pageResources.size > 0) {
       resourcesArr = Array.from(pageResources);
     }
     const entriesJson = [];
     let lastModified = 0;
-    const pageEntryJson = await ManifestGenerator
-      .getPageJsonEntry(host, path, generateLoopingHtml, updateHtml);
+    const parentPath = PathUtils.getParentFromPath(path);
+    const pageEntryJson = await ManifestGenerator.getPageJsonEntry(host, path, isHtmlUpdated);
     if (pageEntryJson.timestamp && pageEntryJson.timestamp > lastModified) {
       lastModified = pageEntryJson.timestamp;
     }
@@ -100,6 +96,7 @@ export default class ManifestGenerator {
         }
         resourceEntry.timestamp = timestamp;
       } else if (ManifestGenerator.isMedia(resourceSubPath)) {
+        resourceEntry.path = parentPath.concat(resourceEntry.path);
         resourceEntry.hash = ManifestGenerator.getHashFromMedia(resourceSubPath);
       }
       entriesJson.push(resourceEntry);
@@ -108,37 +105,35 @@ export default class ManifestGenerator {
     return [entriesJson, lastModified];
   };
 
-  static createManifest = async (host, data, generateLoopingHtml, updateHtml, sequenceAssets = []) => {
-    let pageResources;
-    if (generateLoopingHtml === true) {
-      pageResources = new Set(sequenceAssets);
-    } else {
-      /* eslint-disable object-curly-newline */
-      const {
-        scripts = '[]', styles = '[]', assets = '[]',
-        inlineImages = '[]', dependencies = '[]'
-      } = data;
-      const scriptsList = JSON.parse(scripts);
-      const stylesList = JSON.parse(styles);
-      const assetsList = JSON.parse(assets);
-      assetsList.forEach(ManifestGenerator.trimImagesPath);
-      const inlineImagesList = JSON.parse(inlineImages);
-      inlineImagesList.forEach(ManifestGenerator.trimImagesPath);
-      const dependenciesList = JSON.parse(dependencies);
-      pageResources = new Set([...scriptsList,
-        ...stylesList, ...assetsList,
-        ...inlineImagesList, ...dependenciesList]);
-    }
-    const [entries, lastModified] = await ManifestGenerator
-      .createEntries(host, data.path, pageResources, generateLoopingHtml, updateHtml);
+  static createManifest = async (host, data, isHtmlUpdated, additionalAssets = []) => {
+    /* eslint-disable object-curly-newline */
+    const {
+      scripts = '[]', styles = '[]', assets = '[]',
+      inlineImages = '[]', dependencies = '[]'
+    } = data;
+    const scriptsList = JSON.parse(scripts);
+    const stylesList = JSON.parse(styles);
+    const assetsList = JSON.parse(assets);
+    assetsList.forEach(ManifestGenerator.trimImagesPath);
+    const inlineImagesList = JSON.parse(inlineImages);
+    inlineImagesList.forEach(ManifestGenerator.trimImagesPath);
+    const dependenciesList = JSON.parse(dependencies);
+    const pageResources = new Set([...scriptsList,
+      ...stylesList, ...assetsList,
+      ...inlineImagesList, ...dependenciesList, ...additionalAssets]);
+
+    // eslint-disable-next-line max-len
+    const [entries, lastModified] = await ManifestGenerator.createEntries(host, data.path, pageResources, isHtmlUpdated);
     const currentTime = new Date().getTime();
-    const manifestJson = {};
-    manifestJson.version = '3.0';
-    manifestJson.contentDelivery = {};
-    manifestJson.contentDelivery.providers = [{ name: 'franklin', endpoint: '/' }];
-    manifestJson.contentDelivery.defaultProvider = 'franklin';
-    manifestJson.timestamp = currentTime;
-    manifestJson.entries = entries;
+    const manifestJson = {
+      version: '3.0',
+      timestamp: currentTime,
+      entries,
+      contentDelivery: {
+        providers: [{ name: 'franklin', endpoint: '/' }],
+        defaultProvider: 'franklin'
+      }
+    };
     return [manifestJson, lastModified];
   };
 }
