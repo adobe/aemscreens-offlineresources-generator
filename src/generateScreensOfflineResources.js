@@ -10,7 +10,8 @@
  * governing permissions and limitations under the License.
  */
 
-import { outputFile } from 'fs-extra';
+import { outputFile, pathExists } from 'fs-extra';
+import { load } from 'cheerio';
 import GitUtils from './utils/gitUtils.js';
 import ManifestGenerator from './createManifest.js';
 import FetchUtils from './utils/fetchUtils.js';
@@ -20,6 +21,19 @@ const logIfError = (err) => {
     console.error(err);
   }
 };
+
+async function importAndRun(fileName, ...args) {
+  try {
+    const module = await import(`${fileName}`);
+    if (typeof module.default.generateHTML === 'function') {
+      module.default.generateHTML(...args);
+    } else {
+      console.log(`Function 'generateHTML' not found in module '${fileName}'.`);
+    }
+  } catch (error) {
+    console.error('Error importing module:', error);
+  }
+}
 
 export default class GenerateScreensOfflineResources {
   static getHost = async () => {
@@ -97,6 +111,16 @@ export default class GenerateScreensOfflineResources {
     for (let i = 0; i < totalManifests; i++) {
       const data = manifestData[i];
       const relativeChannelPath = data.path.slice(1);
+
+      // fetch franklin page -> get generator -> generate page
+      // eslint-disable-next-line no-await-in-loop
+      const franklinMarkup = await FetchUtils.fetchData(host, data.path);
+      const $ = load(franklinMarkup);
+      const template = $('meta[name="template"]').attr('content');
+      if (template && pathExists(`./scripts/generators/${template}.js`)) {
+        importAndRun(`${process.cwd()}/scripts/generators/${template}.js`, host, relativeChannelPath);
+      }
+
       let isHtmlUpdated = false;
       /* eslint-disable no-await-in-loop */
       if (await GitUtils.isFileDirty(`${relativeChannelPath}.html`)) {
