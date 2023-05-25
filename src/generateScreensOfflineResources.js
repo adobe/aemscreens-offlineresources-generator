@@ -26,7 +26,7 @@ async function importAndRun(fileName, ...args) {
   try {
     const module = await import(`${fileName}`);
     if (typeof module.default.generateHTML === 'function') {
-      module.default.generateHTML(...args);
+      await module.default.generateHTML(...args);
     } else {
       console.log(`Function 'generateHTML' not found in module '${fileName}'.`);
     }
