@@ -118,7 +118,8 @@ export default class GenerateScreensOfflineResources {
       const $ = load(franklinMarkup);
       const template = $('meta[name="template"]').attr('content');
       if (template && pathExists(`./scripts/generators/${template}.js`)) {
-        importAndRun(`${process.cwd()}/scripts/generators/${template}.js`, host, relativeChannelPath);
+        // eslint-disable-next-line no-await-in-loop
+        await importAndRun(`${process.cwd()}/scripts/generators/${template}.js`, host, relativeChannelPath);
       }
 
       let isHtmlUpdated = false;
