@@ -43,7 +43,7 @@ export default class ManifestGenerator {
    */
   static getPageJsonEntry = async (host, path, isHtmlUpdated) => {
     const entryPath = `${path}.html`;
-    const resp = await FetchUtils.fetchData(host, entryPath);
+    const resp = await FetchUtils.fetchData(host, path);
     const entry = { path: entryPath };
     // timestamp is optional value, only add if last-modified available
     if (isHtmlUpdated) {
