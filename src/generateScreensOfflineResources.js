@@ -1,3 +1,5 @@
+/* eslint-disable no-await-in-loop */
+/* eslint-disable max-len */
 /*
  * Copyright 2023 Adobe. All rights reserved.
  * This file is licensed to you under the Apache License, Version 2.0 (the "License");
@@ -15,6 +17,7 @@ import { load } from 'cheerio';
 import GitUtils from './utils/gitUtils.js';
 import ManifestGenerator from './createManifest.js';
 import FetchUtils from './utils/fetchUtils.js';
+import DefaultGenerator from './generator/default.js';
 
 const logIfError = (err) => {
   if (err) {
@@ -23,16 +26,20 @@ const logIfError = (err) => {
 };
 
 async function importAndRun(fileName, ...args) {
+  let additionalAssets;
   try {
     const module = await import(`${fileName}`);
     if (typeof module.default.generateHTML === 'function') {
-      await module.default.generateHTML(...args);
+      additionalAssets = await module.default.generateHTML(...args);
     } else {
-      console.log(`Function 'generateHTML' not found in module '${fileName}'.`);
+      console.log(`Function 'generateHTML' not found in module '${fileName}'. Fallback to default generator.`);
+      additionalAssets = await DefaultGenerator.generateHTML(...args);
     }
   } catch (error) {
-    console.error('Error importing module:', error);
+    console.error(`Error importing module ${fileName}: ${error}. Fallback to default generator.`);
+    additionalAssets = DefaultGenerator.generateHTML(...args);
   }
+  return additionalAssets;
 }
 
 export default class GenerateScreensOfflineResources {
@@ -117,9 +124,10 @@ export default class GenerateScreensOfflineResources {
       const franklinMarkup = await FetchUtils.fetchData(host, data.path);
       const $ = load(franklinMarkup);
       const template = $('meta[name="template"]').attr('content');
-      if (template && pathExists(`./scripts/generators/${template}.js`)) {
+      let additionalAssets;
+      if (template && await pathExists(`./scripts/generators/${template}.js`)) {
         // eslint-disable-next-line no-await-in-loop
-        await importAndRun(`${process.cwd()}/scripts/generators/${template}.js`, host, relativeChannelPath);
+        additionalAssets = await importAndRun(`${process.cwd()}/scripts/generators/${template}.js`, host, relativeChannelPath);
       }
 
       let isHtmlUpdated = false;
@@ -130,7 +138,7 @@ export default class GenerateScreensOfflineResources {
       }
 
       /* eslint-disable no-await-in-loop */
-      const [manifest, lastModified] = await ManifestGenerator.createManifest(host, data, isHtmlUpdated);
+      const [manifest, lastModified] = await ManifestGenerator.createManifest(host, data, isHtmlUpdated, additionalAssets);
       const channelEntry = {
         manifestPath: `${manifestData[i].path}.manifest.json`,
         lastModified: new Date(lastModified)
