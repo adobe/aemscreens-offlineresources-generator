@@ -119,11 +119,12 @@ export default class ManifestGenerator {
       /* eslint-disable object-curly-newline */
       const {
         scripts = '[]', styles = '[]', assets = '[]',
-        inlineImages = '[]', dependencies = '[]'
+        inlineImages = '[]', dependencies = '[]', background = ''
       } = data;
       const scriptsList = JSON.parse(scripts);
       const stylesList = JSON.parse(styles);
       const assetsList = JSON.parse(assets);
+      assetsList.push(background);
       assetsList.forEach(ManifestGenerator.trimImagesPath);
       const inlineImagesList = JSON.parse(inlineImages);
       inlineImagesList.forEach(ManifestGenerator.trimImagesPath);

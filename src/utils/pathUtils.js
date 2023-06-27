@@ -19,7 +19,6 @@ export default class PathUtils {
     const hierarchy = [];
     let currentParent = PathUtils.getParentFromPath(path);
     while (currentParent !== '/content' && currentParent !== '') {
-      console.log("parentPath = " + currentParent);
       const entry = {};
       entry.title = PathUtils.getCurrentPathName(currentParent);
       entry.path = currentParent;
