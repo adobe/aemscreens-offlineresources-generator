@@ -172,6 +172,7 @@ export default class ChannelHtmlGenerator {
                     endTime: assetDetails['End Time'],
                     launchStartDate: assetDetails['Launch Start'],
                     launchEndDate: assetDetails['Launch End'],
+                    duration: assetDetails['Duration'],
                     type: contentType,
                     isGMT: DateUtils.isGMT(assetDetails.Timezone)
                   });

@@ -104,6 +104,7 @@ export default async function scriptText(assets) {
       const launchEndDate = parseEndDateString(asset.launchEndDate, asset.isGMT);
       const startTime = parseStartTimeString(asset.startTime, asset.isGMT);
       const endTime = parseEndTimeString(asset.endTime, asset.isGMT);
+      const duration = asset.duration ? asset.duration : 8000;
       const now = new Date();
       if (now >= launchStartDate && now <= launchEndDate
         && now >= startTime && now <= endTime) {
@@ -126,7 +127,7 @@ export default async function scriptText(assets) {
                 container.removeChild(img);
                 incrementAdIndex();
                 playAds();
-              }, 8000);
+              }, duration);
             }, 10);
           };
           break;
