@@ -128,6 +128,9 @@ export default class GenerateScreensOfflineResources {
       if (template && await pathExists(`./scripts/generators/${template}.js`)) {
         // eslint-disable-next-line no-await-in-loop
         additionalAssets = await importAndRun(`${process.cwd()}/scripts/generators/${template}.js`, host, relativeChannelPath);
+      } else {
+        // eslint-disable-next-line no-await-in-loop
+        additionalAssets = await DefaultGenerator.generateHTML(host, relativeChannelPath);
       }
 
       let isHtmlUpdated = false;
