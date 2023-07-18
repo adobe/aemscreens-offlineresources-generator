@@ -154,6 +154,9 @@ export default class GenerateScreensOfflineResources {
           ? channelsMap.get(manifestData[i].path).title : '';
         channelEntry.liveUrl = channelsMap.get(manifestData[i].path).liveUrl
           ? channelsMap.get(manifestData[i].path).liveUrl : '';
+        if (channelsMap.get(manifestData[i].path).editUrl) {
+          channelEntry.editUrl = channelsMap.get(manifestData[i].path).editUrl;
+        }
       } else {
         channelEntry.externalId = manifestData[i].path;
         channelEntry.liveUrl = FetchUtils.createUrlFromHostAndPath(host, manifestData[i].path);
