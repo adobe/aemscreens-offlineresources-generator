@@ -139,7 +139,7 @@ export default class ManifestGenerator {
     for (const fragmentPath of fragmentsList) {
       // eslint-disable-next-line no-unused-vars
       const [{ entries: newEntries }, _] = await ManifestGenerator
-        .createManifest(host, manifestMap, fragmentPath, false, []);
+        .createManifest(host, manifestMap, fragmentPath, false, [`${fragmentPath}.plain.html`]);
       newEntries.forEach((entry) => {
         allEntries.set(entry.path, entry);
       });
