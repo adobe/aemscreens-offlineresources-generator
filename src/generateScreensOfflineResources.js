@@ -115,6 +115,11 @@ export default class GenerateScreensOfflineResources {
       }
     };
 
+    const manifestMap = manifestData.reduce((map, manifest) => {
+      map.set(manifest.path, manifest);
+      return map;
+    }, new Map());
+
     for (let i = 0; i < totalManifests; i++) {
       const data = manifestData[i];
       const relativeChannelPath = data.path.slice(1);
@@ -141,7 +146,8 @@ export default class GenerateScreensOfflineResources {
       }
 
       /* eslint-disable no-await-in-loop */
-      const [manifest, lastModified] = await ManifestGenerator.createManifest(host, data, isHtmlUpdated, additionalAssets);
+      const [manifest, lastModified] = await ManifestGenerator.createManifest(host, manifestMap, data.path, isHtmlUpdated, additionalAssets);
+
       const channelEntry = {
         manifestPath: `${manifestData[i].path}.manifest.json`,
         lastModified: new Date(lastModified)

@@ -105,11 +105,12 @@ export default class ManifestGenerator {
     return [entriesJson, lastModified];
   };
 
-  static createManifest = async (host, data, isHtmlUpdated, additionalAssets = []) => {
+  static createManifest = async (host, manifestMap, path, isHtmlUpdated, additionalAssets = []) => {
+    const data = manifestMap.get(path);
     /* eslint-disable object-curly-newline */
     const {
       scripts = '[]', styles = '[]', assets = '[]',
-      inlineImages = '[]', dependencies = '[]'
+      inlineImages = '[]', dependencies = '[]', fragments = '[]'
     } = data;
     const scriptsList = JSON.parse(scripts);
     const stylesList = JSON.parse(styles);
@@ -124,11 +125,29 @@ export default class ManifestGenerator {
 
     // eslint-disable-next-line max-len
     const [entries, lastModified] = await ManifestGenerator.createEntries(host, data.path, pageResources, isHtmlUpdated);
+    const allEntries = new Map();
+    entries.forEach((entry) => {
+      allEntries.set(entry.path, entry);
+    });
+    // add entries for all fragments
+    const fragmentsList = JSON.parse(fragments);
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const fragmentPath of fragmentsList) {
+      // eslint-disable-next-line no-unused-vars
+      const [{ entries: newEntries }, _] = await ManifestGenerator
+        .createManifest(host, manifestMap, fragmentPath, false, []);
+      newEntries.forEach((entry) => {
+        allEntries.set(entry.path, entry);
+      });
+    }
+
+    // bug??
     const currentTime = new Date().getTime();
     const manifestJson = {
       version: '3.0',
       timestamp: currentTime,
-      entries,
+      entries: Array.from(allEntries.values()),
       contentDelivery: {
         providers: [{ name: 'franklin', endpoint: '/' }],
         defaultProvider: 'franklin'
