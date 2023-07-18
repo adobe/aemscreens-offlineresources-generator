@@ -131,21 +131,17 @@ export default class GenerateScreensOfflineResources {
       const template = $('meta[name="template"]').attr('content');
       let additionalAssets;
       if (template && await pathExists(`./scripts/generators/${template}.js`)) {
-        // eslint-disable-next-line no-await-in-loop
         additionalAssets = await importAndRun(`${process.cwd()}/scripts/generators/${template}.js`, host, relativeChannelPath);
       } else {
-        // eslint-disable-next-line no-await-in-loop
         additionalAssets = await DefaultGenerator.generateHTML(host, relativeChannelPath);
       }
 
       let isHtmlUpdated = false;
-      /* eslint-disable no-await-in-loop */
       if (await GitUtils.isFileDirty(`${relativeChannelPath}.html`)) {
         console.log(`Git: Existing html at ${relativeChannelPath}.html is different from generated html.`);
         isHtmlUpdated = true;
       }
 
-      /* eslint-disable no-await-in-loop */
       const [manifest, lastModified] = await ManifestGenerator.createManifest(host, manifestMap, data.path, isHtmlUpdated, additionalAssets);
 
       const channelEntry = {

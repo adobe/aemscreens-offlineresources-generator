@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 /*
  * Copyright 2023 Adobe. All rights reserved.
  * This file is licensed to you under the Apache License, Version 2.0 (the "License");
@@ -14,6 +15,7 @@ import fetch from 'node-fetch';
 import Constants from './constants.js';
 import FetchUtils from './utils/fetchUtils.js';
 import PathUtils from './utils/pathUtils.js';
+import GitUtils from './utils/gitUtils.js';
 
 export default class ManifestGenerator {
   /**
@@ -74,15 +76,16 @@ export default class ManifestGenerator {
     for (let i = 0; i < resourcesArr.length; i++) {
       const resourceSubPath = resourcesArr[i].trim();
       const resourcePath = FetchUtils.createUrlFromHostAndPath(host, resourceSubPath);
-      /* eslint-disable no-await-in-loop */
+
       const resp = await fetch(
         resourcePath,
         { method: 'HEAD', headers: { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey } }
       );
-      if (!resp.ok) {
-        /* eslint-disable no-console */
+      // validate if the resource is available locally
+      if (!resp.ok && !(await GitUtils.isFileDirty(resourceSubPath.slice(1)))) {
         console.log(`resource ${resourcePath} not available for channel ${path}`);
-        /* eslint-disable no-continue */
+
+        // eslint-disable-next-line no-continue
         continue;
       }
       const resourceEntry = {};
@@ -123,8 +126,8 @@ export default class ManifestGenerator {
       ...stylesList, ...assetsList,
       ...inlineImagesList, ...dependenciesList, ...additionalAssets]);
 
-    // eslint-disable-next-line max-len
-    const [entries, lastModified] = await ManifestGenerator.createEntries(host, data.path, pageResources, isHtmlUpdated);
+    const [entries, lastModified] = await ManifestGenerator
+      .createEntries(host, data.path, pageResources, isHtmlUpdated);
     const allEntries = new Map();
     entries.forEach((entry) => {
       allEntries.set(entry.path, entry);
