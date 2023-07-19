@@ -40,9 +40,7 @@ export default class ManifestGenerator {
     return path1.substring(Constants.MEDIA_PREFIX.length, path1.indexOf('.'));
   };
 
-  static extractMediaFromPath = (path) => {
-    path.trim().substring(path.indexOf(Constants.MEDIA_PREFIX));
-  };
+  static extractMediaFromPath = (path) => path.trim().substring(path.indexOf(Constants.MEDIA_PREFIX));
 
   /**
    * Creating Page entry for manifest
