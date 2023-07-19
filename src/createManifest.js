@@ -30,7 +30,7 @@ export default class ManifestGenerator {
   /**
    * Checks if the image is hosted in franklin
    */
-  static isMedia = (path) => path.trim().startsWith(Constants.MEDIA_PREFIX);
+  static isMedia = (path) => path.trim().includes(Constants.MEDIA_PREFIX);
 
   /**
    * For images hosted in Franklin, hash values are appended in name.
@@ -38,6 +38,10 @@ export default class ManifestGenerator {
   static getHashFromMedia = (path) => {
     const path1 = path.trim();
     return path1.substring(Constants.MEDIA_PREFIX.length, path1.indexOf('.'));
+  };
+
+  static extractMediaFromPath = (path) => {
+    path.trim().substring(path.indexOf(Constants.MEDIA_PREFIX));
   };
 
   /**
@@ -141,6 +145,11 @@ export default class ManifestGenerator {
       const [{ entries: newEntries }, _] = await ManifestGenerator
         .createManifest(host, manifestMap, fragmentPath, false, [`${fragmentPath}.plain.html`]);
       newEntries.forEach((entry) => {
+        // rebase media URLs to current path
+        if (ManifestGenerator.isMedia(entry.path)) {
+          entry.path = ManifestGenerator.extractMediaFromPath(entry.path);
+          entry.path = PathUtils.getParentFromPath(path).concat(entry.path);
+        }
         allEntries.set(entry.path, entry);
       });
     }
