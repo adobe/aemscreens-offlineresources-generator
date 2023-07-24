@@ -136,12 +136,14 @@ export default class ManifestGenerator {
     });
     // add entries for all fragments
     const fragmentsList = JSON.parse(fragments);
-
+    let fragmentsLastModified = 0;
     // eslint-disable-next-line no-restricted-syntax
     for (const fragmentPath of fragmentsList) {
       // eslint-disable-next-line no-unused-vars
-      const [{ entries: newEntries }, _] = await ManifestGenerator
+      const [{ entries: newEntries }, fragmentLastModified] = await ManifestGenerator
         .createManifest(host, manifestMap, fragmentPath, false, [`${fragmentPath}.plain.html`]);
+
+      fragmentsLastModified = Math.max(fragmentsLastModified, fragmentLastModified);
       newEntries.forEach((entry) => {
         // rebase media URLs to current path
         if (ManifestGenerator.isMedia(entry.path)) {
@@ -163,6 +165,6 @@ export default class ManifestGenerator {
         defaultProvider: 'franklin'
       }
     };
-    return [manifestJson, lastModified];
+    return [manifestJson, Math.max(lastModified, fragmentsLastModified)];
   };
 }
