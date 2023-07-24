@@ -27,7 +27,12 @@ export default class FetchUtils {
   static fetchDataFromUrl = async (url, additionalHeaders = {}) => {
     let result = '';
     try {
-      result = fetch(url, { headers: { ...additionalHeaders } })
+      result = fetch(url, {
+        headers: {
+          ...additionalHeaders,
+          'x-franklin-allowlist-key': process.env.franklinAllowlistKey
+        }
+      })
         .then((response) => {
           if (!response.ok) {
             throw new Error(`request to fetch ${url} failed with status code ${response.status}`);
