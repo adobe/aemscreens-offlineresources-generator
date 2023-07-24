@@ -155,10 +155,10 @@ export default class ManifestGenerator {
     }
 
     // bug??
-    const currentTime = new Date().getTime();
+    // const currentTime = new Date().getTime();
     const manifestJson = {
       version: '3.0',
-      timestamp: currentTime,
+      timestamp: lastModified,
       entries: Array.from(allEntries.values()),
       contentDelivery: {
         providers: [{ name: 'franklin', endpoint: '/' }],
