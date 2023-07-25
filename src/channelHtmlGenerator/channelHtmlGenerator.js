@@ -166,12 +166,17 @@ export default class ChannelHtmlGenerator {
                   DateUtils.validateTimeFormat(assetDetails['End Time']);
                   DateUtils.validateDateFormat(assetDetails['Launch Start']);
                   DateUtils.validateDateFormat(assetDetails['Launch End']);
+                  DateUtils.validateDateFormat(assetDetails['Start Date']);
+                  DateUtils.validateDateFormat(assetDetails['End Date']);
+                  let startDate = assetDetails['Start Date'] ? assetDetails['Start Date'] : assetDetails['Launch Start'];
+                  console.log("Start Date = " + assetDetails['Start Date'] + " Launch date = " + assetDetails['Launch Start']);
+                  let endDate = assetDetails['End Date'] ? assetDetails['End Date'] : assetDetails['Launch End'];
                   assets.push({
                     link: ChannelHtmlGenerator.getPathNameFromLink(assetDetails.Link),
                     startTime: assetDetails['Start Time'],
                     endTime: assetDetails['End Time'],
-                    launchStartDate: assetDetails['Launch Start'],
-                    launchEndDate: assetDetails['Launch End'],
+                    launchStartDate: startDate,
+                    launchEndDate: endDate,
                     duration: assetDetails['Duration'],
                     type: contentType,
                     isGMT: DateUtils.isGMT(assetDetails.Timezone)
