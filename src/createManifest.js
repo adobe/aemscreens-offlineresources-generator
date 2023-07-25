@@ -124,7 +124,9 @@ export default class ManifestGenerator {
       const scriptsList = JSON.parse(scripts);
       const stylesList = JSON.parse(styles);
       const assetsList = JSON.parse(assets);
-      assetsList.push(background);
+      if(background != '') {
+        assetsList.push(background);
+      }
       assetsList.forEach(ManifestGenerator.trimImagesPath);
       const inlineImagesList = JSON.parse(inlineImages);
       inlineImagesList.forEach(ManifestGenerator.trimImagesPath);
