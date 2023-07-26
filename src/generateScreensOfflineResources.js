@@ -89,6 +89,10 @@ export default class GenerateScreensOfflineResources {
 
       channelData.editUrl = channelsData[i].editUrl;
       channelData.title = channelsData[i].title;
+      channelData.announcement_channel = channelsData[i].announcement_channel;
+      channelData.start_time = channelsData[i].start_time;
+      channelData.end_time = channelsData[i].end_time;
+      channelData.more_info_url = channelsData[i].more_info_url;
       channelsMap.set(channelPath, channelData);
     }
     return channelsMap;
