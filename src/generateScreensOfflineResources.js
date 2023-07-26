@@ -157,6 +157,14 @@ export default class GenerateScreensOfflineResources {
         if (channelsMap.get(manifestData[i].path).editUrl) {
           channelEntry.editUrl = channelsMap.get(manifestData[i].path).editUrl;
         }
+        channelEntry.announcement_channel = channelsMap.get(manifestData[i].path).announcement_channel
+          ? channelsMap.get(manifestData[i].path).announcement_channel : 'false';
+        channelEntry.start_time = channelsMap.get(manifestData[i].path).start_time
+          ? channelsMap.get(manifestData[i].path).start_time : '';
+        channelEntry.end_time = channelsMap.get(manifestData[i].path).end_time
+          ? channelsMap.get(manifestData[i].path).end_time : '';
+        channelEntry.more_info_url = channelsMap.get(manifestData[i].path).more_info_url
+          ? channelsMap.get(manifestData[i].path).more_info_url : '';
       } else {
         channelEntry.externalId = manifestData[i].path;
         channelEntry.liveUrl = FetchUtils.createUrlFromHostAndPath(host, manifestData[i].path);
