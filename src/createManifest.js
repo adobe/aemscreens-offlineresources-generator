@@ -11,7 +11,6 @@
  * governing permissions and limitations under the License.
  */
 
-import fetch from 'node-fetch';
 import Constants from './constants.js';
 import FetchUtils from './utils/fetchUtils.js';
 import PathUtils from './utils/pathUtils.js';
@@ -77,15 +76,10 @@ export default class ManifestGenerator {
     entriesJson.push(pageEntryJson);
     for (let i = 0; i < resourcesArr.length; i++) {
       const resourceSubPath = resourcesArr[i].trim();
-      const resourcePath = FetchUtils.createUrlFromHostAndPath(host, resourceSubPath);
-
-      const resp = await fetch(
-        resourcePath,
-        { method: 'HEAD', headers: { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey } }
-      );
+      const resp = await FetchUtils.makeHeadRequest(host, resourceSubPath);
       // validate if the resource is available locally
       if (!resp.ok && !(await GitUtils.isFileDirty(resourceSubPath.slice(1)))) {
-        console.log(`resource ${resourcePath} not available for channel ${path}`);
+        console.log(`resource ${resourceSubPath} not available for channel ${path}`);
 
         // eslint-disable-next-line no-continue
         continue;

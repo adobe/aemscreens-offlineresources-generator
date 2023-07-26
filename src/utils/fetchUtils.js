@@ -12,6 +12,8 @@
 
 import fetch from 'node-fetch';
 
+global.cache = global.cache || {};
+
 export default class FetchUtils {
   static createUrlFromHostAndPath = (host, path) => {
     const hostNew = host.endsWith('/') ? host.slice(0, -1) : host;
@@ -25,6 +27,9 @@ export default class FetchUtils {
   };
 
   static fetchDataFromUrl = async (url, additionalHeaders = {}) => {
+    if (global.cache[url]) {
+      return Promise.resolve(global.cache[url]);
+    }
     let result = '';
     try {
       result = fetch(url, {
@@ -37,11 +42,33 @@ export default class FetchUtils {
           if (!response.ok) {
             throw new Error(`request to fetch ${url} failed with status code ${response.status}`);
           }
-          return response.text();
+          global.cache[url] = response.text();
+          return global.cache[url];
         });
       return Promise.resolve(result);
     } catch (e) {
       throw new Error(`request to fetch ${url} failed with status code with error ${e}`);
     }
+  };
+
+  static makeHeadRequest = async (host, path, additionalHeaders = {}) => {
+    const resourcePath = FetchUtils.createUrlFromHostAndPath(host, path);
+    let resp;
+    if (global.cache[resourcePath]) {
+      resp = global.cache[resourcePath];
+    } else {
+      resp = await fetch(
+        resourcePath,
+        {
+          method: 'HEAD',
+          headers: {
+            'x-franklin-allowlist-key': process.env.franklinAllowlistKey,
+            ...additionalHeaders
+          }
+        }
+      );
+      global.cache[resourcePath] = resp;
+    }
+    return resp;
   };
 }
