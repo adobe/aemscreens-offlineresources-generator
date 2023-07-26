@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 /*
  * Copyright 2023 Adobe. All rights reserved.
  * This file is licensed to you under the Apache License, Version 2.0 (the "License");
@@ -14,6 +15,7 @@ import fetch from 'node-fetch';
 import Constants from './constants.js';
 import FetchUtils from './utils/fetchUtils.js';
 import PathUtils from './utils/pathUtils.js';
+import GitUtils from './utils/gitUtils.js';
 
 export default class ManifestGenerator {
   /**
@@ -28,7 +30,7 @@ export default class ManifestGenerator {
   /**
    * Checks if the image is hosted in franklin
    */
-  static isMedia = (path) => path.trim().startsWith(Constants.MEDIA_PREFIX);
+  static isMedia = (path) => path.trim().includes(Constants.MEDIA_PREFIX);
 
   /**
    * For images hosted in Franklin, hash values are appended in name.
@@ -37,6 +39,8 @@ export default class ManifestGenerator {
     const path1 = path.trim();
     return path1.substring(Constants.MEDIA_PREFIX.length, path1.indexOf('.'));
   };
+
+  static extractMediaFromPath = (path) => path.trim().substring(path.indexOf(Constants.MEDIA_PREFIX));
 
   /**
    * Creating Page entry for manifest
@@ -74,15 +78,16 @@ export default class ManifestGenerator {
     for (let i = 0; i < resourcesArr.length; i++) {
       const resourceSubPath = resourcesArr[i].trim();
       const resourcePath = FetchUtils.createUrlFromHostAndPath(host, resourceSubPath);
-      /* eslint-disable no-await-in-loop */
+
       const resp = await fetch(
         resourcePath,
         { method: 'HEAD', headers: { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey } }
       );
-      if (!resp.ok) {
-        /* eslint-disable no-console */
+      // validate if the resource is available locally
+      if (!resp.ok && !(await GitUtils.isFileDirty(resourceSubPath.slice(1)))) {
         console.log(`resource ${resourcePath} not available for channel ${path}`);
-        /* eslint-disable no-continue */
+
+        // eslint-disable-next-line no-continue
         continue;
       }
       const resourceEntry = {};
@@ -105,11 +110,12 @@ export default class ManifestGenerator {
     return [entriesJson, lastModified];
   };
 
-  static createManifest = async (host, data, isHtmlUpdated, additionalAssets = []) => {
+  static createManifest = async (host, manifestMap, path, isHtmlUpdated, additionalAssets = []) => {
+    const data = manifestMap.get(path);
     /* eslint-disable object-curly-newline */
     const {
       scripts = '[]', styles = '[]', assets = '[]',
-      inlineImages = '[]', dependencies = '[]'
+      inlineImages = '[]', dependencies = '[]', fragments = '[]'
     } = data;
     const scriptsList = JSON.parse(scripts);
     const stylesList = JSON.parse(styles);
@@ -122,18 +128,43 @@ export default class ManifestGenerator {
       ...stylesList, ...assetsList,
       ...inlineImagesList, ...dependenciesList, ...additionalAssets]);
 
-    // eslint-disable-next-line max-len
-    const [entries, lastModified] = await ManifestGenerator.createEntries(host, data.path, pageResources, isHtmlUpdated);
-    const currentTime = new Date().getTime();
+    const [entries, lastModified] = await ManifestGenerator
+      .createEntries(host, data.path, pageResources, isHtmlUpdated);
+    const allEntries = new Map();
+    entries.forEach((entry) => {
+      allEntries.set(entry.path, entry);
+    });
+    // add entries for all fragments
+    const fragmentsList = JSON.parse(fragments);
+    let fragmentsLastModified = 0;
+    // eslint-disable-next-line no-restricted-syntax
+    for (const fragmentPath of fragmentsList) {
+      // eslint-disable-next-line no-unused-vars
+      const [{ entries: newEntries }, fragmentLastModified] = await ManifestGenerator
+        .createManifest(host, manifestMap, fragmentPath, false, [`${fragmentPath}.plain.html`]);
+
+      fragmentsLastModified = Math.max(fragmentsLastModified, fragmentLastModified);
+      newEntries.forEach((entry) => {
+        // rebase media URLs to current path
+        if (ManifestGenerator.isMedia(entry.path)) {
+          entry.path = ManifestGenerator.extractMediaFromPath(entry.path);
+          entry.path = PathUtils.getParentFromPath(path).concat(entry.path);
+        }
+        allEntries.set(entry.path, entry);
+      });
+    }
+
+    // bug??
+    // const currentTime = new Date().getTime();
     const manifestJson = {
       version: '3.0',
-      timestamp: currentTime,
-      entries,
+      timestamp: lastModified,
+      entries: Array.from(allEntries.values()),
       contentDelivery: {
         providers: [{ name: 'franklin', endpoint: '/' }],
         defaultProvider: 'franklin'
       }
     };
-    return [manifestJson, lastModified];
+    return [manifestJson, Math.max(lastModified, fragmentsLastModified)];
   };
 }
