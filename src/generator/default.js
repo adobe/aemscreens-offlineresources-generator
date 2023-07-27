@@ -19,7 +19,8 @@ export default class HtmlGenerator {
   static generateHTML = async (host, path) => {
     try {
       console.log(`Generating default HTML for ${host}/${path}`);
-      const franklinString = await FetchUtils.fetchData(host, `/${path}`);
+      const franklinResponse = await FetchUtils.fetchDataWithMethod(host, path, 'GET');
+      const franklinString = await franklinResponse.text();
       const $ = load(franklinString);
       await ensureDir(p.dirname(path));
       await outputFile(`${path}.html`, $.html());

@@ -46,7 +46,7 @@ export default class ManifestGenerator {
    */
   static getPageJsonEntry = async (host, path, isHtmlUpdated) => {
     const entryPath = `${path}.html`;
-    const resp = await FetchUtils.fetchData(host, path);
+    const resp = await FetchUtils.fetchDataWithMethod(host, path, 'HEAD');
     const entry = { path: entryPath };
     // timestamp is optional value, only add if last-modified available
     if (isHtmlUpdated) {
@@ -76,7 +76,7 @@ export default class ManifestGenerator {
     entriesJson.push(pageEntryJson);
     for (let i = 0; i < resourcesArr.length; i++) {
       const resourceSubPath = resourcesArr[i].trim();
-      const resp = await FetchUtils.makeHeadRequest(host, resourceSubPath);
+      const resp = await FetchUtils.fetchDataWithMethod(host, resourceSubPath, 'HEAD');
       // validate if the resource is available locally
       if (!resp.ok && !(await GitUtils.isFileDirty(resourceSubPath.slice(1)))) {
         console.log(`resource ${resourceSubPath} not available for channel ${path}`);

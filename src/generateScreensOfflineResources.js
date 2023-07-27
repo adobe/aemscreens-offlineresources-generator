@@ -99,11 +99,9 @@ export default class GenerateScreensOfflineResources {
    */
   static createOfflineResources = async (
     host,
-    jsonManifestData,
-    channelsListData
+    manifests,
+    channelsList
   ) => {
-    const manifests = JSON.parse(jsonManifestData);
-    const channelsList = JSON.parse(channelsListData);
     const totalManifests = parseInt(manifests.total, 10);
     const manifestData = manifests.data;
     const channelsData = channelsList.data;
@@ -126,7 +124,8 @@ export default class GenerateScreensOfflineResources {
 
       // fetch franklin page -> get generator -> generate page
       // eslint-disable-next-line no-await-in-loop
-      const franklinMarkup = await FetchUtils.fetchData(host, data.path);
+      const resp = await FetchUtils.fetchDataWithMethod(host, data.path, 'GET');
+      const franklinMarkup = await resp.text();
       const $ = load(franklinMarkup);
       const template = $('meta[name="template"]').attr('content');
       let additionalAssets;
@@ -179,9 +178,10 @@ export default class GenerateScreensOfflineResources {
       ? `${parsedArgs.helixChannelsList}.json` : '/channels.json';
 
     const host = parsedArgs.customDomain || await GenerateScreensOfflineResources.getHost();
-    const manifests = await FetchUtils.fetchData(host, helixManifest);
-    const channelsList = await FetchUtils.fetchData(host, helixChannelsList);
-
+    let resp = await FetchUtils.fetchDataWithMethod(host, helixManifest, 'GET');
+    const manifests = await resp.json();
+    resp = await FetchUtils.fetchDataWithMethod(host, helixChannelsList, 'GET');
+    const channelsList = await resp.json();
     await GenerateScreensOfflineResources.createOfflineResources(
       host,
       manifests,
