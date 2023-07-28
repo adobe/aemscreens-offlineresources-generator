@@ -89,7 +89,7 @@ export default class GenerateScreensOfflineResources {
 
       channelData.editUrl = channelsData[i].editUrl;
       channelData.title = channelsData[i].title;
-      channelData.announcement_channel = channelsData[i].announcement_channel;
+      channelData.announcementChannel = channelsData[i].announcement_channel;
       channelData.start_time = channelsData[i].start_time;
       channelData.end_time = channelsData[i].end_time;
       channelData.more_info_url = channelsData[i].more_info_url;
@@ -161,8 +161,8 @@ export default class GenerateScreensOfflineResources {
         if (channelsMap.get(manifestData[i].path).editUrl) {
           channelEntry.editUrl = channelsMap.get(manifestData[i].path).editUrl;
         }
-        channelEntry.announcement_channel = channelsMap.get(manifestData[i].path).announcement_channel
-          ? channelsMap.get(manifestData[i].path).announcement_channel : 'false';
+        channelEntry.announcementChannel = channelsMap.get(manifestData[i].path).announcementChannel
+          ? (channelsMap.get(manifestData[i].path).announcementChannel === 'true') : false;
         channelEntry.start_time = channelsMap.get(manifestData[i].path).start_time
           ? channelsMap.get(manifestData[i].path).start_time : '';
         channelEntry.end_time = channelsMap.get(manifestData[i].path).end_time
