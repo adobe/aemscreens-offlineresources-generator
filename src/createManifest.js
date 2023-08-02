@@ -25,6 +25,11 @@ export default class ManifestGenerator {
   static trimImagesPath = (item, index, arr) => {
     const item1 = item.trim();
     arr[index] = item1[0] === '.' ? item1.substring(1, item1.length) : item1;
+    // remove query param from image path if present
+    const queryIndex = arr[index].indexOf('?');
+    if (queryIndex > 0) {
+      arr[index] = arr[index].substring(0, queryIndex);
+    }
   };
 
   /**
@@ -94,15 +99,15 @@ export default class ManifestGenerator {
       resourceEntry.path = resourcesArr[i];
       // timestamp is optional value, only add if last-modified available
       const date = resp.headers.get('last-modified');
-      if (date) {
+      if (ManifestGenerator.isMedia(resourceSubPath)) {
+        resourceEntry.path = parentPath.concat(resourceEntry.path);
+        resourceEntry.hash = ManifestGenerator.getHashFromMedia(resourceSubPath);
+      } else if (date) {
         const timestamp = new Date(date).getTime();
         if (timestamp > lastModified) {
           lastModified = timestamp;
         }
         resourceEntry.timestamp = timestamp;
-      } else if (ManifestGenerator.isMedia(resourceSubPath)) {
-        resourceEntry.path = parentPath.concat(resourceEntry.path);
-        resourceEntry.hash = ManifestGenerator.getHashFromMedia(resourceSubPath);
       }
       entriesJson.push(resourceEntry);
     }
