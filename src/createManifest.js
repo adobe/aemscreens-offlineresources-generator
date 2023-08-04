@@ -23,13 +23,12 @@ export default class ManifestGenerator {
    *
    */
   static trimImagesPath = (item, index, arr) => {
-    const item1 = item.trim();
-    arr[index] = item1[0] === '.' ? item1.substring(1, item1.length) : item1;
+    const trimmedItem = item.trim();
+    const isRelative = trimmedItem[0] === '.';
+    const noDot = isRelative ? trimmedItem.substring(1) : trimmedItem;
     // remove query param from image path if present
-    const queryIndex = arr[index].indexOf('?');
-    if (queryIndex > 0) {
-      arr[index] = arr[index].substring(0, queryIndex);
-    }
+    const noQuery = noDot.split('?')[0];
+    arr[index] = noQuery;
   };
 
   /**
