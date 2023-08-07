@@ -76,13 +76,16 @@ export default class ManifestGenerator {
     entriesJson.push(pageEntryJson);
     for (let i = 0; i < resourcesArr.length; i++) {
       const resourceSubPath = resourcesArr[i].trim();
-      const resp = await FetchUtils.fetchDataWithMethod(host, resourceSubPath, 'HEAD');
-      // validate if the resource is available locally
-      if (!resp.ok && !(await GitUtils.isFileDirty(resourceSubPath.slice(1)))) {
-        console.log(`resource ${resourceSubPath} not available for channel ${path}`);
-
-        // eslint-disable-next-line no-continue
-        continue;
+      let resp;
+      try {
+        resp = await FetchUtils.fetchDataWithMethod(host, resourceSubPath, 'HEAD');
+      } catch (e) {
+        // if resource if not available in codebus, validate if resource is locally available
+        if (!(await GitUtils.isFileDirty(resourceSubPath.slice(1)))) {
+          console.log(`resource ${resourceSubPath} not available for channel ${path}`);
+          // eslint-disable-next-line no-continue
+          continue;
+        }
       }
       const resourceEntry = {};
       resourceEntry.path = resourcesArr[i];
