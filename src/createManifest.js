@@ -94,11 +94,11 @@ export default class ManifestGenerator {
       const resourceEntry = {};
       resourceEntry.path = resourcesArr[i];
       // timestamp is optional value, only add if last-modified available
-      const date = resp.headers.get('last-modified');
       if (ManifestGenerator.isMedia(resourceSubPath)) {
         resourceEntry.path = parentPath.concat(resourceEntry.path);
         resourceEntry.hash = ManifestGenerator.getHashFromMedia(resourceSubPath);
-      } else if (date) {
+      } else if (resp.ok && resp.headers.get('last-modified')) {
+        const date = resp.headers.get('last-modified');
         const timestamp = new Date(date).getTime();
         if (timestamp > lastModified) {
           lastModified = timestamp;
