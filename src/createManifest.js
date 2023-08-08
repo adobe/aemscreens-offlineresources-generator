@@ -53,10 +53,10 @@ export default class ManifestGenerator {
     const resp = await FetchUtils.fetchDataWithMethod(host, path, 'HEAD');
     const entry = { path: entryPath };
     // timestamp is optional value, only add if last-modified available
+    const date = resp && resp.headers.get('last-modified');
     if (isHtmlUpdated) {
       entry.timestamp = new Date().getTime();
-    } else if (resp.ok && resp.headers.get('last-modified')) {
-      const date = resp.headers.get('last-modified');
+    } else if (date) {
       entry.timestamp = new Date(date).getTime();
     }
     return entry;
@@ -94,11 +94,11 @@ export default class ManifestGenerator {
       const resourceEntry = {};
       resourceEntry.path = resourcesArr[i];
       // timestamp is optional value, only add if last-modified available
+      const date = resp && resp.headers.get('last-modified');
       if (ManifestGenerator.isMedia(resourceSubPath)) {
         resourceEntry.path = parentPath.concat(resourceEntry.path);
         resourceEntry.hash = ManifestGenerator.getHashFromMedia(resourceSubPath);
-      } else if (resp && resp.headers.get('last-modified')) {
-        const date = resp.headers.get('last-modified');
+      } else if (date) {
         const timestamp = new Date(date).getTime();
         if (timestamp > lastModified) {
           lastModified = timestamp;

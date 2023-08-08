@@ -42,6 +42,8 @@ export default class FetchUtils {
       });
 
       if (!response.ok) {
+        // not cache error responses
+        await response.ejectFromCache();
         throw new Error(`Request to fetch ${url} failed with status code ${response.status}`);
       }
 
