@@ -11,7 +11,6 @@
  * governing permissions and limitations under the License.
  */
 
-import fetch from 'node-fetch';
 import Constants from './constants.js';
 import FetchUtils from './utils/fetchUtils.js';
 import PathUtils from './utils/pathUtils.js';
@@ -51,13 +50,13 @@ export default class ManifestGenerator {
    */
   static getPageJsonEntry = async (host, path, isHtmlUpdated) => {
     const entryPath = `${path}.html`;
-    const resp = await FetchUtils.fetchData(host, path);
+    const resp = await FetchUtils.fetchDataWithMethod(host, path, 'HEAD');
     const entry = { path: entryPath };
     // timestamp is optional value, only add if last-modified available
+    const date = resp && resp.headers.get('last-modified');
     if (isHtmlUpdated) {
       entry.timestamp = new Date().getTime();
-    } else if (resp.ok && resp.headers.get('last-modified')) {
-      const date = resp.headers.get('last-modified');
+    } else if (date) {
       entry.timestamp = new Date(date).getTime();
     }
     return entry;
@@ -81,23 +80,21 @@ export default class ManifestGenerator {
     entriesJson.push(pageEntryJson);
     for (let i = 0; i < resourcesArr.length; i++) {
       const resourceSubPath = resourcesArr[i].trim();
-      const resourcePath = FetchUtils.createUrlFromHostAndPath(host, resourceSubPath);
-
-      const resp = await fetch(
-        resourcePath,
-        { method: 'HEAD', headers: { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey } }
-      );
-      // validate if the resource is available locally
-      if (!resp.ok && !(await GitUtils.isFileDirty(resourceSubPath.slice(1)))) {
-        console.log(`resource ${resourcePath} not available for channel ${path}`);
-
-        // eslint-disable-next-line no-continue
-        continue;
+      let resp;
+      try {
+        resp = await FetchUtils.fetchDataWithMethod(host, resourceSubPath, 'HEAD');
+      } catch (e) {
+        // if resource if not available in codebus, validate if resource is locally available
+        if (!(await GitUtils.isFileDirty(resourceSubPath.slice(1)))) {
+          console.log(`resource ${resourceSubPath} not available for channel ${path}`);
+          // eslint-disable-next-line no-continue
+          continue;
+        }
       }
       const resourceEntry = {};
       resourceEntry.path = resourcesArr[i];
       // timestamp is optional value, only add if last-modified available
-      const date = resp.headers.get('last-modified');
+      const date = resp && resp.headers.get('last-modified');
       if (ManifestGenerator.isMedia(resourceSubPath)) {
         resourceEntry.path = parentPath.concat(resourceEntry.path);
         resourceEntry.hash = ManifestGenerator.getHashFromMedia(resourceSubPath);

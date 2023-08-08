@@ -10,7 +10,7 @@
  * governing permissions and limitations under the License.
  */
 
-import fetch from 'node-fetch';
+import fetch from 'node-fetch-cache';
 
 export default class FetchUtils {
   static createUrlFromHostAndPath = (host, path) => {
@@ -19,29 +19,37 @@ export default class FetchUtils {
     return `${hostNew}/${pathNew}`;
   };
 
-  static fetchData = async (host, path, additionalHeaders = {}) => {
+  /**
+   * Fetches data from the URL using the specified HTTP method.
+   * The response object is cached for subsequent requests to the same URL.
+   * @param {string} host - The host URL.
+   * @param {string} path - The resource path to append to the host.
+   * @param {string} method - The HTTP method to use for the request (e.g., 'GET', 'HEAD', etc.).
+   * @param {Object} additionalHeaders - Additional headers to include in the request.
+   * @returns {Promise<string|Response>} A promise that resolves to the response object.
+   * @throws {Error} If the request fails or returns an error status code.
+   */
+  static fetchDataWithMethod = async (host, path, method, additionalHeaders = {}) => {
     const url = FetchUtils.createUrlFromHostAndPath(host, path);
-    return FetchUtils.fetchDataFromUrl(url, additionalHeaders);
-  };
 
-  static fetchDataFromUrl = async (url, additionalHeaders = {}) => {
-    let result = '';
     try {
-      result = fetch(url, {
+      const response = await fetch(url, {
+        method,
         headers: {
-          ...additionalHeaders,
-          'x-franklin-allowlist-key': process.env.franklinAllowlistKey
+          'x-franklin-allowlist-key': process.env.franklinAllowlistKey,
+          ...additionalHeaders
         }
-      })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`request to fetch ${url} failed with status code ${response.status}`);
-          }
-          return response.text();
-        });
-      return Promise.resolve(result);
+      });
+
+      if (!response.ok) {
+        // not cache error responses
+        await response.ejectFromCache();
+        throw new Error(`Request to fetch ${url} failed with status code ${response.status}`);
+      }
+
+      return response;
     } catch (e) {
-      throw new Error(`request to fetch ${url} failed with status code with error ${e}`);
+      throw new Error(`Request to fetch ${url} failed with error ${e}`);
     }
   };
 }
