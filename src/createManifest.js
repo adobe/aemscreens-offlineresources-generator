@@ -15,6 +15,7 @@ import Constants from './constants.js';
 import FetchUtils from './utils/fetchUtils.js';
 import PathUtils from './utils/pathUtils.js';
 import GitUtils from './utils/gitUtils.js';
+import HelixAdminUtil from './utils/helixAdminUtil.js';
 
 export default class ManifestGenerator {
   /**
@@ -50,13 +51,18 @@ export default class ManifestGenerator {
    */
   static getPageJsonEntry = async (host, path, isHtmlUpdated) => {
     const entryPath = `${path}.html`;
-    const resp = await FetchUtils.fetchDataWithMethod(host, path, 'HEAD');
     const entry = { path: entryPath };
+
+    let date = await HelixAdminUtil.getLastModified(entryPath);
+    if (date === '') {
+      const resp = await FetchUtils.fetchDataWithMethod(host, path, 'HEAD');
+      date = resp && resp.headers.get('last-modified');
+    }
+
     // timestamp is optional value, only add if last-modified available
-    const date = resp && resp.headers.get('last-modified');
     if (isHtmlUpdated) {
       entry.timestamp = new Date().getTime();
-    } else if (date) {
+    } else if (date !== '') {
       entry.timestamp = new Date(date).getTime();
     }
     return entry;
@@ -94,7 +100,10 @@ export default class ManifestGenerator {
       const resourceEntry = {};
       resourceEntry.path = resourcesArr[i];
       // timestamp is optional value, only add if last-modified available
-      const date = resp && resp.headers.get('last-modified');
+      let date = await HelixAdminUtil.getLastModified(resourceSubPath);
+      if (date === '') {
+        date = resp && resp.headers.get('last-modified');
+      }
       if (ManifestGenerator.isMedia(resourceSubPath)) {
         resourceEntry.path = parentPath.concat(resourceEntry.path);
         resourceEntry.hash = ManifestGenerator.getHashFromMedia(resourceSubPath);
