@@ -26,10 +26,12 @@ export default class FetchUtils {
    * @param {string} path - The resource path to append to the host.
    * @param {string} method - The HTTP method to use for the request (e.g., 'GET', 'HEAD', etc.).
    * @param {Object} additionalHeaders - Additional headers to include in the request.
+   * @param {boolean} returnIfError - Return empty response in case there is an
+   *                                    error in response instead of throwing error
    * @returns {Promise<string|Response>} A promise that resolves to the response object.
    * @throws {Error} If the request fails or returns an error status code.
    */
-  static fetchDataWithMethod = async (host, path, method, additionalHeaders = {}) => {
+  static fetchDataWithMethod = async (host, path, method, additionalHeaders = {}, returnIfError = false) => {
     const url = FetchUtils.createUrlFromHostAndPath(host, path);
 
     try {
@@ -44,7 +46,9 @@ export default class FetchUtils {
       if (!response.ok) {
         // not cache error responses
         await response.ejectFromCache();
-        throw new Error(`Request to fetch ${url} failed with status code ${response.status}`);
+        if (!returnIfError) {
+          throw new Error(`Request to fetch ${url} failed with status code ${response.status}`);
+        }
       }
 
       return response;
