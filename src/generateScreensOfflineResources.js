@@ -72,9 +72,10 @@ export default class GenerateScreensOfflineResources {
     jsonManifestData,
     channelsListData,
     generateLoopingHtml,
+    useAdaptiveRenditions,
     updatedHtmls = [],
     sequenceAssets = {},
-    includeCarousel = []
+    includeCarousel = [],
   ) => {
     const manifests = JSON.parse(jsonManifestData);
     const channelsList = JSON.parse(channelsListData);
@@ -92,7 +93,7 @@ export default class GenerateScreensOfflineResources {
       const hasCarousel = includeCarousel.includes(data.path);
       /* eslint-disable no-await-in-loop */
       const [manifest, lastModified] = await ManifestGenerator
-        .createManifest(host, data, generateLoopingHtml && hasCarousel, updateHtml, sequenceAssets[data.path]);
+        .createManifest(host, data, generateLoopingHtml && hasCarousel, updateHtml, sequenceAssets[data.path], useAdaptiveRenditions);
       const channelEntry = {};
       channelEntry.manifestPath = `${manifestData[i].path}.manifest.json`;
       channelEntry.lastModified = new Date(lastModified);
@@ -103,16 +104,14 @@ export default class GenerateScreensOfflineResources {
           ? channelsMap.get(manifestData[i].path).externalId : '';
         channelEntry.title = channelsMap.get(manifestData[i].path).title
           ? channelsMap.get(manifestData[i].path).title : '';
-        channelEntry.liveUrl = channelsMap.get(manifestData[i].path).liveUrl
-          ? channelsMap.get(manifestData[i].path).liveUrl : '';
         if(channelsMap.get(manifestData[i].path).editUrl) {
           channelEntry.editUrl = channelsMap.get(manifestData[i].path).editUrl;
         }
       } else {
         channelEntry.externalId = manifestData[i].path;
-        channelEntry.liveUrl = FetchUtils.createUrlFromHostAndPath(host, manifestData[i].path);
         channelEntry.title = '';
       }
+      channelEntry.liveUrl = GenerateScreensOfflineResources.processLiveUrl(FetchUtils.createUrlFromHostAndPath(host, manifestData[i].path));
       channelJson.channels.push(channelEntry);
       let manifestFilePath = '';
       manifestFilePath = `${manifestData[i].path.substring(1, manifestData[i].path.length)}.manifest.json`;
@@ -123,7 +122,7 @@ export default class GenerateScreensOfflineResources {
         }
       });
     }
-    console.log("Manifests written");
+    console.log('Manifests written');
     outputFile('screens/channels.json', JSON.stringify(channelJson, null, 2), (err) => {
       if (err) {
         /* eslint-disable no-console */
@@ -141,6 +140,13 @@ export default class GenerateScreensOfflineResources {
     if (parsedArgs.generateLoopingHtml === 'true') {
       generateLoopingHtml = true;
     }
+
+    let useAdaptiveRenditions  = false;
+
+    if(parsedArgs.useAdaptiveRenditions === 'true') {
+        useAdaptiveRenditions = true;
+    }
+
     const gitUrl = await GitUtils.getOriginURL(process.cwd(), { });
     const gitBranch = await GitUtils.getBranch(process.cwd());
     const host = parsedArgs.customDomain || `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
@@ -162,6 +168,7 @@ export default class GenerateScreensOfflineResources {
       manifests,
       channelsList,
       generateLoopingHtml,
+        useAdaptiveRenditions,
       sequenceDetails.updatedHtmls,
       sequenceDetails.assetsLinks,
       sequenceDetails.includeCarousel

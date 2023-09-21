@@ -15,6 +15,11 @@ export default class PathUtils {
 
   static getCurrentPathName = (path) => path.substring(path.lastIndexOf('/') + 1);
 
+  static getAssetName = (asset) => {
+    const assetNameWithExtension = PathUtils.getCurrentPathName(asset);
+    return assetNameWithExtension.substring(0, assetNameWithExtension.lastIndexOf('.'));
+  };
+
   static getParentHierarchy = (path) => {
     const hierarchy = [];
     let currentParent = PathUtils.getParentFromPath(path);

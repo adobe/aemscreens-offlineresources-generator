@@ -38,6 +38,25 @@ export default class ManifestGenerator {
     return path1.substring(Constants.MEDIA_PREFIX.length, path1.indexOf('.'));
   };
 
+  static getContentType = async (assetLink) => {
+    const resp = await fetch(assetLink, { method: 'HEAD' });
+    if (resp && resp.headers) {
+      const contentType = resp.headers.get('content-type');
+      return ManifestGenerator.processContentType(contentType);
+    }
+    return '';
+  };
+
+  static processContentType = (contentType) => {
+    let type = '';
+    if (contentType && contentType.includes('video')) {
+      type = 'video';
+    } else if (contentType && contentType.includes('image')) {
+      type = 'image';
+    }
+    return type;
+  };
+
   /**
    * Creating Page entry for manifest
    */
@@ -63,7 +82,7 @@ export default class ManifestGenerator {
   /**
    * Create the manifest entries
    */
-  static createEntries = async (host, path, pageResources, updateHtml) => {
+  static createEntries = async (host, path, pageResources, updateHtml, useAdaptiveRenditions) => {
     let resourcesArr = [];
     if (pageResources && pageResources.size > 0) {
       resourcesArr = Array.from(pageResources);
@@ -105,13 +124,47 @@ export default class ManifestGenerator {
         resourceEntry.path = parentPath.concat(resourceEntry.path);
         resourceEntry.hash = ManifestGenerator.getHashFromMedia(resourceSubPath);
       }
+
+      if(useAdaptiveRenditions && await ManifestGenerator.getContentType(resourcePath) === 'image') {
+        resourceEntry.renditions = [];
+        const assetName = PathUtils.getAssetName(resourcePath);
+        const renditionsParentPath = PathUtils.getParentFromPath(resourceSubPath) + '/' + assetName + '_renditions/';
+        const landscapeRendition = renditionsParentPath + assetName + '-landscape.jpeg';
+        const portraitRendition = renditionsParentPath + assetName + '-portrait.jpeg';
+        const response1 = await fetch(
+            FetchUtils.createUrlFromHostAndPath(host,landscapeRendition),
+            { method: 'HEAD', headers: { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey } }
+        );
+        if (response1.ok) {
+          const landscapeRenditionJson = {};
+          landscapeRenditionJson.height = 1024;
+          landscapeRenditionJson.width = 1408;
+          landscapeRenditionJson.path = landscapeRendition;
+          landscapeRenditionJson.name = 'landscape';
+          resourceEntry.renditions.push(landscapeRenditionJson);
+        }
+
+        const response2 = await fetch(
+            FetchUtils.createUrlFromHostAndPath(host,portraitRendition),
+            { method: 'HEAD', headers: { 'x-franklin-allowlist-key': process.env.franklinAllowlistKey } }
+        );
+        if (response2.ok) {
+          const portraitRenditionJson = {};
+          portraitRenditionJson.height = 1408;
+          portraitRenditionJson.width = 1024;
+          portraitRenditionJson.path = portraitRendition;
+          portraitRenditionJson.name = 'portrait';
+          resourceEntry.renditions.push(portraitRenditionJson);
+        }
+      }
+
       entriesJson.push(resourceEntry);
     }
 
     return [entriesJson, lastModified];
   };
 
-  static createManifest = async (host, data, generateLoopingHtml, updateHtml, sequenceAssets = []) => {
+  static createManifest = async (host, data, generateLoopingHtml, updateHtml, sequenceAssets = [], useAdaptiveRenditions) => {
     let pageResources;
     if (generateLoopingHtml === true) {
       pageResources = new Set(sequenceAssets);
@@ -124,7 +177,7 @@ export default class ManifestGenerator {
       const scriptsList = JSON.parse(scripts);
       const stylesList = JSON.parse(styles);
       const assetsList = JSON.parse(assets);
-      if(background != '') {
+      if(background !== '') {
         assetsList.push(background);
       }
       assetsList.forEach(ManifestGenerator.trimImagesPath);
@@ -136,7 +189,7 @@ export default class ManifestGenerator {
         ...inlineImagesList, ...dependenciesList]);
     }
     const [entries, lastModified] = await ManifestGenerator
-      .createEntries(host, data.path, pageResources, updateHtml);
+      .createEntries(host, data.path, pageResources, updateHtml, useAdaptiveRenditions);
     const currentTime = new Date().getTime();
     const manifestJson = {};
     manifestJson.version = '3.0';
