@@ -118,8 +118,8 @@ export default class GenerateScreensOfflineResources {
       return map;
     }, new Map());
 
-    const additionalAssetsList = new Map();
-    const isHtmlUpdatedList = new Map();
+    const additionalAssetsMap = new Map();
+    const isHtmlUpdatedMap = new Map();
 
     for (let i = 0; i < totalManifests; i++) {
       const data = manifestData[i];
@@ -143,13 +143,13 @@ export default class GenerateScreensOfflineResources {
         console.log(`Git: Existing html at ${relativeChannelPath}.html is different from generated html.`);
         isHtmlUpdated = true;
       }
-      additionalAssetsList.set(data.path, additionalAssets);
-      isHtmlUpdatedList.set(data.path, isHtmlUpdated);
+      additionalAssetsMap.set(data.path, additionalAssets);
+      isHtmlUpdatedMap.set(data.path, isHtmlUpdated);
     }
 
     for (let i = 0; i < totalManifests; i++) {
       const data = manifestData[i];
-      const [manifest, lastModified] = await ManifestGenerator.createManifest(host, manifestMap, data.path, isHtmlUpdatedList, additionalAssetsList.get(data.path));
+      const [manifest, lastModified] = await ManifestGenerator.createManifest(host, manifestMap, data.path, isHtmlUpdatedMap, additionalAssetsMap.get(data.path));
 
       const channelEntry = {
         manifestPath: `${manifestData[i].path}.manifest.json`,
