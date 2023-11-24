@@ -50,7 +50,7 @@ export default class ManifestGenerator {
    */
   static getPageJsonEntry = async (host, path, isHtmlUpdated) => {
     const entryPath = `${path}.html`;
-    const resp = await FetchUtils.fetchDataWithMethod(host, path, 'HEAD');
+    const resp = await FetchUtils.fetchDataWithMethod(host, entryPath, 'HEAD');
     const entry = { path: entryPath };
     // timestamp is optional value, only add if last-modified available
     const date = resp && resp.headers.get('last-modified');
@@ -111,7 +111,7 @@ export default class ManifestGenerator {
     return [entriesJson, lastModified];
   };
 
-  static createManifest = async (host, manifestMap, path, isHtmlUpdated, additionalAssets = []) => {
+  static createManifest = async (host, manifestMap, path, isHtmlUpdatedList, additionalAssets = []) => {
     const data = manifestMap.get(path);
     /* eslint-disable object-curly-newline */
     const {
@@ -130,7 +130,7 @@ export default class ManifestGenerator {
       ...inlineImagesList, ...dependenciesList, ...additionalAssets]);
 
     const [entries, lastModified] = await ManifestGenerator
-      .createEntries(host, data.path, pageResources, isHtmlUpdated);
+      .createEntries(host, data.path, pageResources, isHtmlUpdatedList.get(data.path));
     const allEntries = new Map();
     entries.forEach((entry) => {
       allEntries.set(entry.path, entry);
@@ -142,7 +142,7 @@ export default class ManifestGenerator {
     for (const fragmentPath of fragmentsList) {
       // eslint-disable-next-line no-unused-vars
       const [{ entries: newEntries }, fragmentLastModified] = await ManifestGenerator
-        .createManifest(host, manifestMap, fragmentPath, false, [`${fragmentPath}.plain.html`]);
+        .createManifest(host, manifestMap, fragmentPath, isHtmlUpdatedList, [`${fragmentPath}.plain.html`]);
 
       fragmentsLastModified = Math.max(fragmentsLastModified, fragmentLastModified);
       newEntries.forEach((entry) => {
