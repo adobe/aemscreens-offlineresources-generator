@@ -18,6 +18,7 @@ import GitUtils from './utils/gitUtils.js';
 import ManifestGenerator from './createManifest.js';
 import FetchUtils from './utils/fetchUtils.js';
 import DefaultGenerator from './generator/default.js';
+import PathUtils from './utils/pathUtils.js';
 
 const logIfError = (err) => {
   if (err) {
@@ -118,6 +119,9 @@ export default class GenerateScreensOfflineResources {
       return map;
     }, new Map());
 
+    const additionalAssetsMap = new Map();
+    const isHtmlUpdatedMap = new Map();
+
     for (let i = 0; i < totalManifests; i++) {
       const data = manifestData[i];
       const relativeChannelPath = data.path.slice(1);
@@ -140,14 +144,21 @@ export default class GenerateScreensOfflineResources {
         console.log(`Git: Existing html at ${relativeChannelPath}.html is different from generated html.`);
         isHtmlUpdated = true;
       }
+      additionalAssetsMap.set(data.path, additionalAssets);
+      isHtmlUpdatedMap.set(data.path, isHtmlUpdated);
+    }
 
-      const [manifest, lastModified] = await ManifestGenerator.createManifest(host, manifestMap, data.path, isHtmlUpdated, additionalAssets);
+    for (let i = 0; i < totalManifests; i++) {
+      const data = manifestData[i];
+      const [manifest, lastModified] = await ManifestGenerator.createManifest(host, manifestMap, data.path, isHtmlUpdatedMap, additionalAssetsMap.get(data.path));
 
       const channelEntry = {
         manifestPath: `${manifestData[i].path}.manifest.json`,
         lastModified: new Date(lastModified)
       };
 
+      const hierarchy = PathUtils.getParentHierarchy(manifestData[i].path);
+      channelEntry.hierarchy = hierarchy;
       if (channelsMap.get(manifestData[i].path)) {
         channelEntry.externalId = channelsMap.get(manifestData[i].path).externalId
           ? channelsMap.get(manifestData[i].path).externalId : '';
