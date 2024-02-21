@@ -50,14 +50,16 @@ export default class ManifestGenerator {
    */
   static getPageJsonEntry = async (host, path, isHtmlUpdated) => {
     const entryPath = `${path}.html`;
-    const resp = await FetchUtils.fetchDataWithMethod(host, entryPath, 'HEAD');
     const entry = { path: entryPath };
-    // timestamp is optional value, only add if last-modified available
-    const date = resp && resp.headers.get('last-modified');
     if (isHtmlUpdated) {
       entry.timestamp = new Date().getTime();
-    } else if (date) {
-      entry.timestamp = new Date(date).getTime();
+    } else {
+      const resp = await FetchUtils.fetchDataWithMethod(host, entryPath, 'HEAD');
+      const date = resp && resp.headers.get('last-modified');
+      // timestamp is optional value, only add if last-modified available
+      if (date) {
+        entry.timestamp = new Date(date).getTime();
+      }
     }
     return entry;
   };
