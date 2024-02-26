@@ -46,6 +46,32 @@ export default class ManifestGenerator {
   static extractMediaFromPath = (path) => path.trim().substring(path.indexOf(Constants.MEDIA_PREFIX));
 
   /**
+   * @param {string} host - custom host for the franklin site
+   * @param {string} path - resource path
+   * @returns {Promise<string>} - last modified for resource
+   * @throws {Error} - when resource does not exist
+   */
+  static getLastModified = async (host, path) => {
+    // media resources are not supported by admin APIs
+    const gitUrl = await GitUtils.getOriginURL(process.cwd(), {});
+    const branch = await GitUtils.getBranch(process.cwd());
+    const resp = await FetchUtils.fetchDataWithMethod(
+      `https://admin.hlx.page/status/${gitUrl.owner}/${gitUrl.repo}/${branch}`,
+      path,
+      'GET'
+    );
+    const jsonResponse = await resp.json();
+    if (jsonResponse.code?.status === 200) {
+      return new Date(jsonResponse.code.sourceLastModified).getTime();
+    }
+    if (jsonResponse.live?.status === 200) {
+      return new Date(jsonResponse.live.lastModified).getTime();
+    }
+    // resource does not exist
+    throw new Error(`Resource at ${path} does not exist`);
+  };
+
+  /**
    * Creating Page entry for manifest
    */
   static getPageJsonEntry = async (host, path, isHtmlUpdated) => {
@@ -54,12 +80,7 @@ export default class ManifestGenerator {
     if (isHtmlUpdated) {
       entry.timestamp = new Date().getTime();
     } else {
-      const resp = await FetchUtils.fetchDataWithMethod(host, entryPath, 'HEAD');
-      const date = resp && resp.headers.get('last-modified');
-      // timestamp is optional value, only add if last-modified available
-      if (date) {
-        entry.timestamp = new Date(date).getTime();
-      }
+      entry.timestamp = await this.getLastModified(host, entryPath);
     }
     return entry;
   };
@@ -82,30 +103,27 @@ export default class ManifestGenerator {
     entriesJson.push(pageEntryJson);
     for (let i = 0; i < resourcesArr.length; i++) {
       const resourceSubPath = resourcesArr[i].trim();
-      let resp;
-      try {
-        resp = await FetchUtils.fetchDataWithMethod(host, resourceSubPath, 'HEAD');
-      } catch (e) {
-        // if resource if not available in codebus, validate if resource is locally available
-        if (!(await GitUtils.isFileDirty(resourceSubPath.slice(1)))) {
-          console.log(`resource ${resourceSubPath} not available for channel ${path}`);
-          // eslint-disable-next-line no-continue
-          continue;
-        }
-      }
       const resourceEntry = {};
       resourceEntry.path = resourcesArr[i];
-      // timestamp is optional value, only add if last-modified available
-      const date = resp && resp.headers.get('last-modified');
-      if (ManifestGenerator.isMedia(resourceSubPath)) {
+
+      // media resources have hash, does not need timestamp to track changes
+      if (this.isMedia(resourceSubPath)) {
         resourceEntry.path = parentPath.concat(resourceEntry.path);
         resourceEntry.hash = ManifestGenerator.getHashFromMedia(resourceSubPath);
-      } else if (date) {
-        const timestamp = new Date(date).getTime();
-        if (timestamp > lastModified) {
-          lastModified = timestamp;
+      } else {
+        let resourceLastModified;
+        try {
+          resourceLastModified = await this.getLastModified(host, resourceSubPath);
+        } catch (e) {
+          // if resource if not available in codebus, validate if resource is locally available
+          if (!(await GitUtils.isFileDirty(resourceSubPath.slice(1)))) {
+            console.log(`resource ${resourceSubPath} not available for channel ${path}`);
+            // eslint-disable-next-line no-continue
+            continue;
+          }
         }
-        resourceEntry.timestamp = timestamp;
+        lastModified = Math.max(lastModified, resourceLastModified);
+        resourceEntry.timestamp = resourceLastModified;
       }
       entriesJson.push(resourceEntry);
     }
