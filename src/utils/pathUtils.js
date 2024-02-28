@@ -10,6 +10,8 @@
  * governing permissions and limitations under the License.
  */
 
+import Constants from '../constants.js';
+
 export default class PathUtils {
   static getParentFromPath = (path) => path.substring(0, path.lastIndexOf('/'));
 
@@ -27,5 +29,36 @@ export default class PathUtils {
     }
     hierarchy.reverse();
     return hierarchy;
+  };
+
+  /**
+   * Checks if the given resource path represents a media (image/video) hosted in Franklin.
+   *
+   * @param {string} resourcePath - The path of the resource to be checked.
+   * @returns {boolean} - True if the resource path represents a media hosted in Franklin, otherwise false.
+   */
+  static isMedia = (resourcePath) => resourcePath.trim().includes(Constants.MEDIA_PREFIX);
+
+  /**
+   * Returns the hash value of the media resource.
+   * For images hosted in Franklin, hash values are appended to the resource name.
+   *
+   * @param {string} resourcePath - The path of the media resource.
+   * @returns {string} - The hash value extracted from the media resource path.
+   */
+  static getHashFromMedia = (resourcePath) => {
+    const trimmedResourcePath = resourcePath.trim();
+    return trimmedResourcePath.substring(Constants.MEDIA_PREFIX.length, trimmedResourcePath.indexOf('.'));
+  };
+
+  /**
+   * Extracts the media path from the given resource path by removing the media prefix.
+   *
+   * @param {string} resourcePath - The path of the media resource.
+   * @returns {string} - The resource path after removing the media prefix.
+   */
+  static extractMediaFromPath = (resourcePath) => {
+    const trimmedResourcePath = resourcePath.trim();
+    return trimmedResourcePath.substring(trimmedResourcePath.indexOf(Constants.MEDIA_PREFIX));
   };
 }
