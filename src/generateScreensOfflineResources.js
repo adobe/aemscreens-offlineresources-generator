@@ -162,6 +162,7 @@ export default class GenerateScreensOfflineResources {
    * Main method exposed to clients
    */
   static run = async (args) => {
+    const startTime = new Date();
     const parsedArgs = parseArgs(args);
     const indexedManifestPath = parsedArgs.helixManifest ? `${parsedArgs.helixManifest}.json` : '/manifest.json';
     const indexedChannelPath = parsedArgs.helixChannelsList ? `${parsedArgs.helixChannelsList}.json` : '/channels.json';
@@ -173,8 +174,7 @@ export default class GenerateScreensOfflineResources {
     resp = await FetchUtils.fetchDataWithMethod(host, indexedChannelPath, 'GET');
     const indexedChannels = await resp.json();
 
-    const startTime = new Date();
     await GenerateScreensOfflineResources.createOfflineResources(host, indexedManifests.data, indexedChannels.data);
-    console.log(`Manifest Generation took ${new Date() - startTime} time`);
+    console.log(`Offline Resource Generation took ${new Date() - startTime} ms`);
   };
 }

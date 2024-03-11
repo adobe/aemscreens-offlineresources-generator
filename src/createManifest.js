@@ -133,6 +133,20 @@ export default class ManifestGenerator {
    * @returns Manifest for the channel
    */
   createManifestForChannel = async (channelPath, additionalAssets = []) => {
+    const manifest = {
+      version: '3.0',
+      timestamp: 0,
+      entries: [],
+      contentDelivery: {
+        providers: [{ name: 'franklin', endpoint: '/' }],
+        defaultProvider: 'franklin'
+      }
+    };
+
+    if (!this.indexedManifestsMap.has(channelPath)) {
+      return manifest;
+    }
+
     // unwrap indexed manifest
     let {
       scripts = '[]', styles = '[]', assets = '[]',
@@ -175,13 +189,9 @@ export default class ManifestGenerator {
     entries = Array.from(allEntries.values()).sort((a, b) => a.path.localeCompare(b.path));
 
     return {
-      version: '3.0',
+      ...manifest,
       timestamp: lastModified,
-      entries,
-      contentDelivery: {
-        providers: [{ name: 'franklin', endpoint: '/' }],
-        defaultProvider: 'franklin'
-      }
+      entries
     };
   };
 }
