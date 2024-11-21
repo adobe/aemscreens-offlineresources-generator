@@ -109,6 +109,52 @@ export default class GenerateScreensOfflineResources {
     const channelsMap = createChannelMap(indexedChannels);
     const manifestMap = createManifestMap(indexedManifests);
 
+<<<<<<< Updated upstream
+=======
+  static processLiveUrl = (liveUrl) => {
+    try {
+      const url = new URL(liveUrl);
+      url.pathname = `${url.pathname}.html`;
+      return url.toString();
+    } catch (err) {
+      /* eslint-disable no-console */
+      console.warn(`Invalid live url: ${liveUrl}`, err);
+    }
+    return liveUrl;
+  };
+
+  /**
+   * Create ChannelMap from the helix channels list
+   */
+  static createChannelMap = (channelsData) => {
+    const channelsMap = new Map();
+    for (let i = 0; i < channelsData.length; i++) {
+      const channelPath = channelsData[i].path;
+      const channelData = {};
+      channelData.externalId = channelsData[i].externalId;
+      channelData.liveUrl = GenerateScreensOfflineResources.processLiveUrl(channelsData[i].liveUrl);
+
+      channelData.editUrl = channelsData[i].editUrl;
+      channelData.title = channelsData[i].title;
+      channelData.manifestPath = channelsData[i].manifestPath;
+      channelsMap.set(channelPath, channelData);
+    }
+    return channelsMap;
+  };
+
+  /**
+   * Create offline resources
+   */
+  static createOfflineResources = async (
+    host,
+    manifests,
+    channelsList
+  ) => {
+    const totalManifests = parseInt(manifests.total, 10);
+    const manifestData = manifests.data;
+    const channelsData = channelsList.data;
+    const channelsMap = GenerateScreensOfflineResources.createChannelMap(channelsData);
+>>>>>>> Stashed changes
     const channelJson = {
       channels: [],
       metadata: {
@@ -143,6 +189,10 @@ export default class GenerateScreensOfflineResources {
         channelJsonEntry.liveUrl = channelsMap.get(channelPath).liveUrl || '';
         if (channelsMap.get(channelPath).editUrl) {
           channelJsonEntry.editUrl = channelsMap.get(channelPath).editUrl;
+        }
+        if (channelsMap.get(manifestData[i].path).manifestPath === 'null') {
+          console.log(`Manifest path is marked null for channel ${manifestData[i].path}`);
+          channelEntry.manifestPath = null;
         }
       } else {
         channelJsonEntry.externalId = channelPath;
