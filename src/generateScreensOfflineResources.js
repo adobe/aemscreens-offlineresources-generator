@@ -144,6 +144,10 @@ export default class GenerateScreensOfflineResources {
         if (channelsMap.get(channelPath).editUrl) {
           channelJsonEntry.editUrl = channelsMap.get(channelPath).editUrl;
         }
+        if (channelsMap.get(channelPath).isOnlineChannel === 'true') {
+          console.log(`Online channel found: ${channelPath}. Removing manifest path.`);
+          channelJsonEntry.manifestPath = null;
+        }
       } else {
         channelJsonEntry.externalId = channelPath;
         channelJsonEntry.liveUrl = FetchUtils.createUrlFromHostAndPath(host, channelPath);
