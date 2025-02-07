@@ -12,4 +12,5 @@
 
 export default class Constants {
   static MEDIA_PREFIX = '/media_';
+  static VIDEOS_IDENTIFIER = '.mp4';
 }

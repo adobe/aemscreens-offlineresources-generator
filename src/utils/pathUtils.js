@@ -39,6 +39,8 @@ export default class PathUtils {
    */
   static isMedia = (resourcePath) => resourcePath.trim().includes(Constants.MEDIA_PREFIX);
 
+  static isVideoUrl = (url) => url.trim().includes(Constants.VIDEOS_IDENTIFIER);
+
   /**
    * Returns the hash value of the media resource.
    * For images hosted in Franklin, hash values are appended to the resource name.

@@ -107,7 +107,7 @@ export default class ManifestGenerator {
       resourceEntry.path = resourcePath.trim();
 
       // Media resources have hash and do not need a timestamp to track changes
-      if (PathUtils.isMedia(resourceEntry.path)) {
+      if (PathUtils.isMedia(resourceEntry.path) || PathUtils.isVideoUrl(resourceEntry.path)) {
         resourceEntry.hash = PathUtils.getHashFromMedia(resourceEntry.path);
         resourceEntry.path = parentPath.concat(resourceEntry.path);
       } else {
