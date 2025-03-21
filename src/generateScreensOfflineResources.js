@@ -41,7 +41,7 @@ const importAndRun = async (fileName, ...args) => {
 const getHost = async () => {
   const gitUrl = await GitUtils.getOriginURL(process.cwd(), {});
   const gitBranch = await GitUtils.getBranch(process.cwd());
-  return `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.hlx.live`;
+  return `https://${gitBranch}--${gitUrl.repo}--${gitUrl.owner}.aem.live`;
 };
 
 const parseArgs = (args) => {
