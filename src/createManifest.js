@@ -172,7 +172,20 @@ export default class ManifestGenerator {
 
     // add entries for all fragments
     await Promise.all(fragments.map(async (fragmentPath) => {
-      const fragmentManifest = await this.createManifestForChannel(fragmentPath, [`${fragmentPath}.plain.html`]);
+      let normalizedFragmentPath = fragmentPath;
+      
+      // Normalize absolute URLs to relative paths
+      if (fragmentPath && (fragmentPath.startsWith('http://') || fragmentPath.startsWith('https://'))) {
+        try {
+          const url = new URL(fragmentPath);
+          normalizedFragmentPath = url.pathname;
+          console.log(`[MANIFEST_GENERATOR] Normalized fragment URL: ${fragmentPath} → ${normalizedFragmentPath}`);
+        } catch (e) {
+          console.warn(`[MANIFEST_GENERATOR] Error parsing fragment URL: ${fragmentPath}`, e);
+        }
+      }
+      
+      const fragmentManifest = await this.createManifestForChannel(normalizedFragmentPath, [`${normalizedFragmentPath}.plain.html`]);
 
       lastModified = Math.max(lastModified, fragmentManifest.timestamp);
       fragmentManifest.entries.forEach((entry) => {
