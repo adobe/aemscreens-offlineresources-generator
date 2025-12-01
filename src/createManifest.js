@@ -13,6 +13,7 @@
 import FetchUtils from './utils/fetchUtils.js';
 import PathUtils from './utils/pathUtils.js';
 import GitUtils from './utils/gitUtils.js';
+import Constants from './constants.js';
 
 /**
  * Trims the image path and removes any query parameters from it.
@@ -109,7 +110,10 @@ export default class ManifestGenerator {
       // Media resources have hash and do not need a timestamp to track changes
       if (PathUtils.isMedia(resourceEntry.path)) {
         resourceEntry.hash = PathUtils.getHashFromMedia(resourceEntry.path);
-        resourceEntry.path = parentPath.concat(resourceEntry.path);
+        // Scene7 URLs should not have parent path prepended (they're absolute paths)
+        if (!resourceEntry.path.includes(Constants.SCENE7_IMAGE_PREFIX)) {
+          resourceEntry.path = parentPath.concat(resourceEntry.path);
+        }
       } else {
         try {
           resourceEntry.timestamp = await this.getLastModified(resourceEntry.path);
@@ -173,7 +177,7 @@ export default class ManifestGenerator {
     // add entries for all fragments
     await Promise.all(fragments.map(async (fragmentPath) => {
       let normalizedFragmentPath = fragmentPath;
-      
+
       // Normalize absolute URLs to relative paths
       if (fragmentPath && (fragmentPath.startsWith('http://') || fragmentPath.startsWith('https://'))) {
         try {
@@ -184,8 +188,11 @@ export default class ManifestGenerator {
           console.warn(`[MANIFEST_GENERATOR] Error parsing fragment URL: ${fragmentPath}`, e);
         }
       }
-      
-      const fragmentManifest = await this.createManifestForChannel(normalizedFragmentPath, [`${normalizedFragmentPath}.plain.html`]);
+
+      const fragmentManifest = await this.createManifestForChannel(
+        normalizedFragmentPath,
+        [`${normalizedFragmentPath}.plain.html`]
+      );
 
       lastModified = Math.max(lastModified, fragmentManifest.timestamp);
       fragmentManifest.entries.forEach((entry) => {

@@ -12,4 +12,6 @@
 
 export default class Constants {
   static MEDIA_PREFIX = '/media_';
+
+  static SCENE7_IMAGE_PREFIX = '/is/image/IMGDIR/';
 }

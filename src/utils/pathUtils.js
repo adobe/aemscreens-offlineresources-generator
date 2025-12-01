@@ -32,22 +32,31 @@ export default class PathUtils {
   };
 
   /**
-   * Checks if the given resource path represents a media (image/video) hosted in Franklin.
+   * Checks if the given resource path represents a media (image/video) hosted in Franklin or Scene7.
    *
    * @param {string} resourcePath - The path of the resource to be checked.
-   * @returns {boolean} - True if the resource path represents a media hosted in Franklin, otherwise false.
+   * @returns {boolean} - True if the resource path represents a media hosted in Franklin or Scene7, otherwise false.
    */
-  static isMedia = (resourcePath) => resourcePath.trim().includes(Constants.MEDIA_PREFIX);
+  static isMedia = (resourcePath) => {
+    const trimmedPath = resourcePath.trim();
+    return trimmedPath.includes(Constants.MEDIA_PREFIX) || trimmedPath.includes(Constants.SCENE7_IMAGE_PREFIX);
+  };
 
   /**
    * Returns the hash value of the media resource.
    * For images hosted in Franklin, hash values are appended to the resource name.
+   * For Scene7 profile images, LDAP is used as the hash.
    *
    * @param {string} resourcePath - The path of the media resource.
    * @returns {string} - The hash value extracted from the media resource path.
    */
   static getHashFromMedia = (resourcePath) => {
     const trimmedResourcePath = resourcePath.trim();
+    if (trimmedResourcePath.includes(Constants.SCENE7_IMAGE_PREFIX)) {
+      // For Scene7 URLs like /is/image/IMGDIR/sakshamg, extract LDAP as hash
+      const ldap = trimmedResourcePath.substring(Constants.SCENE7_IMAGE_PREFIX.length);
+      return `scene7-${ldap}`;
+    }
     return trimmedResourcePath.substring(Constants.MEDIA_PREFIX.length, trimmedResourcePath.indexOf('.'));
   };
 
