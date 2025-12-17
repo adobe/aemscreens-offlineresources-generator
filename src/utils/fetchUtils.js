@@ -20,6 +20,38 @@ export default class FetchUtils {
   };
 
   /**
+   * Fetches data from the Franklin Admin API using x-auth-token authentication.
+   * @param {string} host - The host URL.
+   * @param {string} path - The resource path to append to the host.
+   * @param {string} method - The HTTP method to use for the request (e.g., 'GET', 'HEAD', etc.).
+   * @returns {Promise<string|Response>} A promise that resolves to the response object.
+   * @throws {Error} If the request fails or returns an error status code.
+   */
+  static fetchAdminApiData = async (host, path, method, additionalHeaders = {}) => {
+    const url = FetchUtils.createUrlFromHostAndPath(host, path);
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'x-auth-token': process.env.X_AUTH_TOKEN,
+          ...additionalHeaders
+        }
+      });
+
+      if (!response.ok) {
+        // not cache error responses
+        await response.ejectFromCache();
+        throw new Error(`Request to fetch ${url} failed with status code ${response.status}`);
+      }
+
+      return response;
+    } catch (e) {
+      throw new Error(`Request to fetch ${url} failed with error ${e}`);
+    }
+  };
+
+  /**
    * Fetches data from the URL using the specified HTTP method.
    * The response object is cached for subsequent requests to the same URL.
    * @param {string} host - The host URL.
@@ -37,7 +69,6 @@ export default class FetchUtils {
         method,
         headers: {
           'x-franklin-allowlist-key': process.env.franklinAllowlistKey,
-          'x-auth-token': process.env.X_AUTH_TOKEN,
           ...additionalHeaders
         }
       });
