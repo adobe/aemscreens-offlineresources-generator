@@ -37,6 +37,7 @@ export default class FetchUtils {
         method,
         headers: {
           'x-franklin-allowlist-key': process.env.franklinAllowlistKey,
+          'x-auth-token': process.env.X_AUTH_TOKEN,
           ...additionalHeaders
         }
       });
