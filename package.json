@@ -1,6 +1,6 @@
 {
     "name": "@aem-screens/screens-offlineresources-generator",
-    "version": "1.0.14",
+    "version": "1.0.15",
     "description": "Screens module to generate offline resources for Screens channels created through Franklin",
     "main": "src/index.js",
     "type": "module",
