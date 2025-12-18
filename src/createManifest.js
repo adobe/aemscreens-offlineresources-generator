@@ -55,7 +55,7 @@ export default class ManifestGenerator {
 
     this.gitUrl = this.gitUrl || await GitUtils.getOriginURL(process.cwd(), {});
     this.branch = this.branch || await GitUtils.getBranch(process.cwd());
-    const resp = await FetchUtils.fetchDataWithMethod(
+    const resp = await FetchUtils.fetchAdminApiData(
       `https://admin.hlx.page/status/${this.gitUrl.owner}/${this.gitUrl.repo}/${this.branch}`,
       path,
       'GET'
